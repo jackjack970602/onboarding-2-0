@@ -1,0 +1,449 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0000010000000000000001 /* OnboardingPrototypeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000020000000000000001 /* OnboardingPrototypeApp.swift */; };
+		AA0000030000000000000001 /* ProductAvatarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000040000000000000001 /* ProductAvatarView.swift */; };
+		AA0000050000000000000001 /* ProductAvatarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000060000000000000001 /* ProductAvatarViewModel.swift */; };
+		AA0000070000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000080000000000000001 /* Assets.xcassets */; };
+		AA0000240000000000000001 /* ProductSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000250000000000000001 /* ProductSettingsView.swift */; };
+		AA0000260000000000000001 /* InapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000270000000000000001 /* InapView.swift */; };
+		AA0000280000000000000001 /* InApp/InapViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000290000000000000001 /* InApp/InapViewModel.swift */; };
+		AA00002A0000000000000001 /* InApp/Animation/InAppTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00002B0000000000000001 /* InApp/Animation/InAppTransition.swift */; };
+		AA00002C0000000000000001 /* InApp/Animation/InAppFromNotchTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00002D0000000000000001 /* InApp/Animation/InAppFromNotchTransition.swift */; };
+		AA00002E0000000000000001 /* InApp/Presentation/InAppWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00002F0000000000000001 /* InApp/Presentation/InAppWindow.swift */; };
+		AA0000300000000000000001 /* InApp/Presentation/InAppPresentationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000310000000000000001 /* InApp/Presentation/InAppPresentationController.swift */; };
+		AA0000320000000000000001 /* InApp/Views/SimpleInAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000330000000000000001 /* InApp/Views/SimpleInAppView.swift */; };
+		AA0000340000000000000001 /* InApp/Utils/Optional+Unwrapped.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000350000000000000001 /* InApp/Utils/Optional+Unwrapped.swift */; };
+		AA0000360000000000000001 /* NotificationCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000370000000000000001 /* NotificationCenterView.swift */; };
+		AA0000380000000000000001 /* NotificationCenterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000390000000000000001 /* NotificationCenterViewModel.swift */; };
+		AA00003A0000000000000001 /* NCInAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00003B0000000000000001 /* NCInAppView.swift */; };
+		AA00003C0000000000000001 /* NCInAppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00003D0000000000000001 /* NCInAppViewModel.swift */; };
+		AA00003E0000000000000001 /* NCInAppMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00003F0000000000000001 /* NCInAppMessageView.swift */; };
+		AA0000400000000000000001 /* CharityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000410000000000000001 /* CharityView.swift */; };
+		AA0000420000000000000001 /* UnifiedWave.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA0000430000000000000001 /* UnifiedWave.metal */; };
+		AA0000470000000000000001 /* GradientShader.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA0000460000000000000001 /* GradientShader.metal */; };
+		AA0000490000000000000001 /* ShadersPlaygroundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000480000000000000001 /* ShadersPlaygroundView.swift */; };
+		AA00004B0000000000000001 /* PlaygroundShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA00004A0000000000000001 /* PlaygroundShaders.metal */; };
+		AA0000500000000000000001 /* EnvelopeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000510000000000000001 /* EnvelopeView.swift */; };
+		AA0000520000000000000001 /* PulseLikeNotificationCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000530000000000000001 /* PulseLikeNotificationCenterView.swift */; };
+		AA0000540000000000000001 /* PulseLikeNotificationCenterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000550000000000000001 /* PulseLikeNotificationCenterViewModel.swift */; };
+		AA00005C0000000000000001 /* DecorationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00005D0000000000000001 /* DecorationView.swift */; };
+		AA00005E0000000000000001 /* TestInAppView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00005F0000000000000001 /* TestInAppView.swift */; };
+		AA0000600000000000000001 /* TestInAppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000610000000000000001 /* TestInAppViewModel.swift */; };
+		AA0000620000000000000001 /* TransfersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000630000000000000001 /* TransfersView.swift */; };
+		AA0000640000000000000001 /* FireworksMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000650000000000000001 /* FireworksMetalView.swift */; };
+		AA0000660000000000000001 /* FireworksShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA0000670000000000000001 /* FireworksShaders.metal */; };
+		AA0000680000000000000001 /* RippleMetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000690000000000000001 /* RippleMetalView.swift */; };
+		AA00006A0000000000000001 /* RippleShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA00006B0000000000000001 /* RippleShaders.metal */; };
+		AA00006C0000000000000001 /* TransferEffectVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00006D0000000000000001 /* TransferEffectVideoView.swift */; };
+		AA00006E0000000000000001 /* summer.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA00006F0000000000000001 /* summer.mp4 */; };
+		AA0000700000000000000001 /* bravo.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000710000000000000001 /* bravo.mp4 */; };
+		AA0000720000000000000001 /* baloons.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000730000000000000001 /* baloons.mp4 */; };
+		AA0000740000000000000001 /* bears.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000750000000000000001 /* bears.mp4 */; };
+		AA0000760000000000000001 /* dog.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000770000000000000001 /* dog.mp4 */; };
+		AA0000780000000000000001 /* BirthdayInApp.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000790000000000000001 /* BirthdayInApp.mp4 */; };
+		AA00007A0000000000000001 /* ExperimentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00007B0000000000000001 /* ExperimentsView.swift */; };
+		AA00007C0000000000000001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00007D0000000000000001 /* OnboardingView.swift */; };
+		AA00007E0000000000000001 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00007F0000000000000001 /* LoginView.swift */; };
+		AA0000800000000000000001 /* cloud.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000810000000000000001 /* cloud.mp4 */; };
+		AA0000820000000000000001 /* LoginShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = AA0000830000000000000001 /* LoginShaders.metal */; };
+		AA0000840000000000000001 /* login-fon-2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000850000000000000001 /* login-fon-2.mp4 */; };
+		AA0000860000000000000001 /* OnboardingInterface1Light.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000870000000000000001 /* OnboardingInterface1Light.mp4 */; };
+		AA0000880000000000000001 /* OnboardingInterface1Dark.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA0000890000000000000001 /* OnboardingInterface1Dark.mp4 */; };
+		AA0000900000000000000001 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000910000000000000001 /* AccountsView.swift */; };
+		AA0000920000000000000001 /* SeregaEmotionalText.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000930000000000000001 /* SeregaEmotionalText.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA0000020000000000000001 /* OnboardingPrototypeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPrototypeApp.swift; sourceTree = "<group>"; };
+		AA0000040000000000000001 /* ProductAvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductAvatarView.swift; sourceTree = "<group>"; };
+		AA0000060000000000000001 /* ProductAvatarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductAvatarViewModel.swift; sourceTree = "<group>"; };
+		AA0000080000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA0000090000000000000001 /* OnboardingPrototype.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OnboardingPrototype.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000250000000000000001 /* ProductSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductSettingsView.swift; sourceTree = "<group>"; };
+		AA0000270000000000000001 /* InapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InapView.swift; sourceTree = "<group>"; };
+		AA0000290000000000000001 /* InApp/InapViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/InapViewModel.swift; sourceTree = "<group>"; };
+		AA00002B0000000000000001 /* InApp/Animation/InAppTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/Animation/InAppTransition.swift; sourceTree = "<group>"; };
+		AA00002D0000000000000001 /* InApp/Animation/InAppFromNotchTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/Animation/InAppFromNotchTransition.swift; sourceTree = "<group>"; };
+		AA00002F0000000000000001 /* InApp/Presentation/InAppWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/Presentation/InAppWindow.swift; sourceTree = "<group>"; };
+		AA0000310000000000000001 /* InApp/Presentation/InAppPresentationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/Presentation/InAppPresentationController.swift; sourceTree = "<group>"; };
+		AA0000330000000000000001 /* InApp/Views/SimpleInAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InApp/Views/SimpleInAppView.swift; sourceTree = "<group>"; };
+		AA0000350000000000000001 /* InApp/Utils/Optional+Unwrapped.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "InApp/Utils/Optional+Unwrapped.swift"; sourceTree = "<group>"; };
+		AA0000370000000000000001 /* NotificationCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterView.swift; sourceTree = "<group>"; };
+		AA0000390000000000000001 /* NotificationCenterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCenterViewModel.swift; sourceTree = "<group>"; };
+		AA00003B0000000000000001 /* NCInAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NCInAppView.swift; sourceTree = "<group>"; };
+		AA00003D0000000000000001 /* NCInAppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NCInAppViewModel.swift; sourceTree = "<group>"; };
+		AA00003F0000000000000001 /* NCInAppMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NCInAppMessageView.swift; sourceTree = "<group>"; };
+		AA0000410000000000000001 /* CharityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharityView.swift; sourceTree = "<group>"; };
+		AA0000430000000000000001 /* UnifiedWave.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = UnifiedWave.metal; sourceTree = "<group>"; };
+		AA0000460000000000000001 /* GradientShader.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = GradientShader.metal; sourceTree = "<group>"; };
+		AA0000480000000000000001 /* ShadersPlaygroundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShadersPlaygroundView.swift; sourceTree = "<group>"; };
+		AA00004A0000000000000001 /* PlaygroundShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = PlaygroundShaders.metal; sourceTree = "<group>"; };
+		AA0000510000000000000001 /* EnvelopeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvelopeView.swift; sourceTree = "<group>"; };
+		AA0000530000000000000001 /* PulseLikeNotificationCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLikeNotificationCenterView.swift; sourceTree = "<group>"; };
+		AA0000550000000000000001 /* PulseLikeNotificationCenterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PulseLikeNotificationCenterViewModel.swift; sourceTree = "<group>"; };
+		AA00005D0000000000000001 /* DecorationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecorationView.swift; sourceTree = "<group>"; };
+		AA00005F0000000000000001 /* TestInAppView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestInAppView.swift; sourceTree = "<group>"; };
+		AA0000610000000000000001 /* TestInAppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestInAppViewModel.swift; sourceTree = "<group>"; };
+		AA0000630000000000000001 /* TransfersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransfersView.swift; sourceTree = "<group>"; };
+		AA0000650000000000000001 /* FireworksMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FireworksMetalView.swift; sourceTree = "<group>"; };
+		AA0000670000000000000001 /* FireworksShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = FireworksShaders.metal; sourceTree = "<group>"; };
+		AA0000690000000000000001 /* RippleMetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RippleMetalView.swift; sourceTree = "<group>"; };
+		AA00006B0000000000000001 /* RippleShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = RippleShaders.metal; sourceTree = "<group>"; };
+		AA00006D0000000000000001 /* TransferEffectVideoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransferEffectVideoView.swift; sourceTree = "<group>"; };
+		AA00006F0000000000000001 /* summer.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = summer.mp4; sourceTree = "<group>"; };
+		AA0000710000000000000001 /* bravo.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bravo.mp4; sourceTree = "<group>"; };
+		AA0000730000000000000001 /* baloons.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = baloons.mp4; sourceTree = "<group>"; };
+		AA0000750000000000000001 /* bears.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = bears.mp4; sourceTree = "<group>"; };
+		AA0000770000000000000001 /* dog.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = dog.mp4; sourceTree = "<group>"; };
+		AA0000790000000000000001 /* BirthdayInApp.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = BirthdayInApp.mp4; sourceTree = "<group>"; };
+		AA00007B0000000000000001 /* ExperimentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExperimentsView.swift; sourceTree = "<group>"; };
+		AA00007D0000000000000001 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		AA00007F0000000000000001 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		AA0000810000000000000001 /* cloud.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cloud.mp4; sourceTree = "<group>"; };
+		AA0000830000000000000001 /* LoginShaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = LoginShaders.metal; sourceTree = "<group>"; };
+		AA0000850000000000000001 /* login-fon-2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "login-fon-2.mp4"; sourceTree = "<group>"; };
+		AA0000870000000000000001 /* OnboardingInterface1Light.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingInterface1Light.mp4; sourceTree = "<group>"; };
+		AA0000890000000000000001 /* OnboardingInterface1Dark.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = OnboardingInterface1Dark.mp4; sourceTree = "<group>"; };
+		AA0000910000000000000001 /* AccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
+		AA0000930000000000000001 /* SeregaEmotionalText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeregaEmotionalText.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA0000100000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA0000110000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				AA0000120000000000000001 /* OnboardingPrototype */,
+				AA0000130000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA0000120000000000000001 /* OnboardingPrototype */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000020000000000000001 /* OnboardingPrototypeApp.swift */,
+				AA00007D0000000000000001 /* OnboardingView.swift */,
+				AA0000870000000000000001 /* OnboardingInterface1Light.mp4 */,
+				AA0000890000000000000001 /* OnboardingInterface1Dark.mp4 */,
+				AA0000080000000000000001 /* Assets.xcassets */,
+			);
+			path = OnboardingPrototype;
+			sourceTree = "<group>";
+		};
+		AA0000130000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000090000000000000001 /* OnboardingPrototype.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA0000140000000000000001 /* OnboardingPrototype */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000150000000000000001 /* Build configuration list for PBXNativeTarget "OnboardingPrototype" */;
+			buildPhases = (
+				AA0000160000000000000001 /* Sources */,
+				AA0000100000000000000001 /* Frameworks */,
+				AA0000170000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OnboardingPrototype;
+			productName = OnboardingPrototype;
+			productReference = AA0000090000000000000001 /* OnboardingPrototype.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA0000180000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA0000140000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = AA0000190000000000000001 /* Build configuration list for PBXProject "OnboardingPrototype" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA0000110000000000000001;
+			productRefGroup = AA0000130000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA0000140000000000000001 /* OnboardingPrototype */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA0000170000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000070000000000000001 /* Assets.xcassets in Resources */,
+				AA0000860000000000000001 /* OnboardingInterface1Light.mp4 in Resources */,
+				AA0000880000000000000001 /* OnboardingInterface1Dark.mp4 in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA0000160000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0000010000000000000001 /* OnboardingPrototypeApp.swift in Sources */,
+				AA00007C0000000000000001 /* OnboardingView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA0000200000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA0000210000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA0000220000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TFK8XD62A8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Onboarding Prototype";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.onboardingprototype;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA0000230000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = TFK8XD62A8;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Onboarding Prototype";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.codex.onboardingprototype;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0000150000000000000001 /* Build configuration list for PBXNativeTarget "OnboardingPrototype" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000220000000000000001 /* Debug */,
+				AA0000230000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000190000000000000001 /* Build configuration list for PBXProject "OnboardingPrototype" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000200000000000000001 /* Debug */,
+				AA0000210000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA0000180000000000000001 /* Project object */;
+}
