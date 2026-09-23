@@ -560,6 +560,131 @@ private struct OnboardingDeviceFrame<Content: View>: View {
     }
 }
 
+private struct FigmaPhoneMockupFrame<Content: View>: View {
+    let size: CGSize
+    let hidesBezels: Bool
+    private let content: Content
+
+    init(
+        size: CGSize,
+        hidesBezels: Bool = false,
+        @ViewBuilder content: (CGSize) -> Content
+    ) {
+        self.size = size
+        self.hidesBezels = hidesBezels
+        let metrics = Metrics(size: size)
+        self.content = content(hidesBezels ? size : metrics.slotFrame.size)
+    }
+
+    var body: some View {
+        let metrics = Metrics(size: size)
+
+        ZStack(alignment: .topLeading) {
+            Color.clear
+                .frame(width: size.width, height: size.height)
+
+            if hidesBezels {
+                ZStack {
+                    content
+                }
+                    .frame(width: size.width, height: size.height)
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: metrics.outerCornerRadius,
+                            style: .circular
+                        )
+                    )
+            } else {
+                RoundedRectangle(
+                    cornerRadius: metrics.outerCornerRadius,
+                    style: .circular
+                )
+                .fill(.black)
+                .overlay {
+                    RoundedRectangle(
+                        cornerRadius: metrics.outerCornerRadius,
+                        style: .circular
+                    )
+                    .strokeBorder(
+                        Color(red: 221 / 255, green: 221 / 255, blue: 221 / 255),
+                        lineWidth: metrics.outerBorderWidth
+                    )
+                }
+                .frame(
+                    width: metrics.outerFrame.width,
+                    height: metrics.outerFrame.height
+                )
+                .offset(
+                    x: metrics.outerFrame.minX,
+                    y: metrics.outerFrame.minY
+                )
+
+                ZStack {
+                    content
+                }
+                    .frame(
+                        width: metrics.slotFrame.width,
+                        height: metrics.slotFrame.height
+                    )
+                    .background(Color(.systemBackground))
+                    .clipShape(
+                        RoundedRectangle(
+                            cornerRadius: metrics.slotCornerRadius,
+                            style: .circular
+                        )
+                    )
+                    .offset(
+                        x: metrics.slotFrame.minX,
+                        y: metrics.slotFrame.minY
+                    )
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .containerShape(
+            RoundedRectangle(
+                cornerRadius: metrics.outerCornerRadius,
+                style: .circular
+            )
+        )
+    }
+
+    private struct Metrics {
+        let outerFrame: CGRect
+        let slotFrame: CGRect
+        let outerCornerRadius: CGFloat
+        let slotCornerRadius: CGFloat
+        let outerBorderWidth: CGFloat
+
+        init(size: CGSize) {
+            let progress = min(max((size.width - 198) / (260 - 198), 0), 1)
+
+            outerFrame = CGRect(
+                x: Self.interpolate(2, 3, progress: progress),
+                y: Self.interpolate(2, 2.669921875, progress: progress),
+                width: Self.interpolate(194, 254, progress: progress),
+                height: Self.interpolate(402, 536, progress: progress)
+            )
+            slotFrame = CGRect(
+                x: Self.interpolate(10, 12.52587890625, progress: progress),
+                y: Self.interpolate(10, 12.00390625, progress: progress),
+                width: Self.interpolate(178, 234.94845581054688, progress: progress),
+                height: Self.interpolate(386, 517.3333740234375, progress: progress)
+            )
+            outerCornerRadius = Self.interpolate(32, 46, progress: progress)
+            slotCornerRadius = Self.interpolate(24, 36, progress: progress)
+            outerBorderWidth = Self.interpolate(2, 3, progress: progress)
+        }
+
+        private static func interpolate(
+            _ from: CGFloat,
+            _ to: CGFloat,
+            progress: CGFloat
+        ) -> CGFloat {
+            from + (to - from) * progress
+        }
+    }
+}
+
 private struct BottomSheetOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -1139,28 +1264,26 @@ private struct IOS26StyleOnboarding: View {
             pageWidth: pageWidth,
             pictureAreaHeight: size.height
         )
-        let shape = ConcentricRectangle(corners: .concentric, isUniform: true)
 
         return ZStack(alignment: .top) {
-            OnboardingDeviceFrame(
+            FigmaPhoneMockupFrame(
                 size: phoneLayout.size,
                 hidesBezels: hideBezels
-            ) {
+            ) { viewportSize in
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
 
                     mediaView(
                         for: item,
-                        isActive: currentIndex == index,
-                        shape: shape
+                        isActive: currentIndex == index
                     )
                     .frame(
-                        width: phoneLayout.size.width,
-                        height: phoneLayout.size.height
+                        width: viewportSize.width,
+                        height: viewportSize.height
                     )
                     .offset(
                         x: CGFloat(index - currentIndex)
-                            * (phoneLayout.size.width + 12)
+                            * (viewportSize.width + 12)
                             + dragTranslation
                     )
                 }
@@ -1218,8 +1341,7 @@ private struct IOS26StyleOnboarding: View {
     @ViewBuilder
     private func mediaView(
         for item: Item,
-        isActive: Bool,
-        shape: ConcentricRectangle
+        isActive: Bool
     ) -> some View {
         ZStack {
             if let poster = item.media.poster {
@@ -1241,7 +1363,6 @@ private struct IOS26StyleOnboarding: View {
             }
         }
         .clipped()
-        .clipShape(shape)
     }
 
     private func textContentView(pageWidth: CGFloat) -> some View {
