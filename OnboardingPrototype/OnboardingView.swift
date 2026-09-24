@@ -116,17 +116,38 @@ private struct IllustrationOnboardingView: View {
                 .init(
                     id: 0,
                     title: "Делите покупки\nв Шопинге по карте",
-                    subtitle: "Оплачивайте часть суммы сразу,\nостальное потом — каждые 2 недели",
+                    subtitle: "Оплачивайте часть суммы сразу.\nОстальное — потом, равными частями.\nПлатежи списываются автоматически\nкаждые две недели",
                     imageName: "OnboardingIllustrationShopping",
                     imageAlignment: .bottom,
-                    buttonTitle: "Далее"
+                    buttonTitle: "Далее",
+                    textLayout: .maximum
                 ),
                 .init(
                     id: 1,
-                    title: "Включайте Долями\nдля оплаты в Шопинге",
-                    subtitle: "Спишется только 25% от ближайшей\nпокупки и сервисный сбор 5%",
+                    title: "Включайте Долями",
+                    subtitle: "Платите за покупки частями",
                     imageName: "OnboardingIllustrationInstallments",
-                    buttonTitle: "Включить"
+                    buttonTitle: "Включить",
+                    textLayout: .minimum
+                ),
+                .init(
+                    id: 2,
+                    title: "Покупайте сейчас\nи платите постепенно",
+                    subtitle: "Разделите оплату на части.\nПервый платёж спишется сразу,\nостальные — каждые две недели",
+                    imageName: "OnboardingIllustrationShopping",
+                    imageAlignment: .bottom,
+                    buttonTitle: "Понятно",
+                    textLayout: .medium
+                ),
+                .init(
+                    id: 3,
+                    title: "Новый онбординг\nдля интерфейсных изменений",
+                    subtitle: "Здесь мы пишем что-то необходимое.\nПостарайтесь уложиться в 2–3 строки\nМаксимум в 4",
+                    imageName: "OnboardingIllustrationShopping",
+                    imageAlignment: .bottom,
+                    buttonTitle: "Далее",
+                    secondaryButtonTitle: "Secondary action",
+                    textLayout: .twoButtons
                 )
             ],
             onBackFromFirstPage: { dismiss() }
@@ -136,6 +157,18 @@ private struct IllustrationOnboardingView: View {
 }
 
 private struct IllustrationStyleOnboarding: View {
+    private static let maximumTitleLines = 2
+    private static let maximumSubtitleLines = 4
+    private static let copySpacing: CGFloat = 8
+    private static let twoButtonSpacing: CGFloat = 16
+    private static let maximumCopyHeight =
+        ceil(UIFont.systemFont(ofSize: 20, weight: .bold).lineHeight)
+            * CGFloat(maximumTitleLines)
+        + copySpacing
+        + ceil(UIFont.systemFont(ofSize: 17, weight: .regular).lineHeight)
+            * CGFloat(maximumSubtitleLines)
+    private static let fixedBottomReferenceHeight: CGFloat = 380
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
 
@@ -144,147 +177,164 @@ private struct IllustrationStyleOnboarding: View {
 
     @State private var currentIndex = 0
     @State private var dragTranslation: CGFloat = 0
+    @State private var swipeHapticTrigger = 0
 
     var body: some View {
         GeometryReader { geometry in
-            ZStack(alignment: .bottom) {
+            let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
+            let topSafeArea = max(geometry.safeAreaInsets.top, 44)
+            let bottomHeight = fixedBottomHeight(bottomSafeArea: bottomSafeArea)
+            let pictureAreaHeight = max(280, geometry.size.height - bottomHeight)
+
+            ZStack(alignment: .top) {
                 backgroundColor
                     .ignoresSafeArea()
 
-                ambientLightView
+                VStack(spacing: 0) {
+                    pictureAreaView(
+                        pageWidth: geometry.size.width,
+                        size: CGSize(
+                            width: geometry.size.width,
+                            height: pictureAreaHeight
+                        )
+                    )
+                    .frame(height: pictureAreaHeight)
+                    .clipped()
 
-                heroView
+                    bottomView(
+                        pageWidth: geometry.size.width,
+                        bottomSafeArea: bottomSafeArea
+                    )
+                    .frame(height: bottomHeight)
+                    .background(backgroundColor)
+                }
 
-                controlsView
-
-                backButton
+                backButton(topInset: topSafeArea)
             }
             .contentShape(Rectangle())
             .simultaneousGesture(pageDragGesture(pageWidth: geometry.size.width))
+            .sensoryFeedback(.selection, trigger: swipeHapticTrigger)
         }
+        .ignoresSafeArea()
     }
 
-    private var ambientLightView: some View {
-        GeometryReader { geometry in
+    private func pictureAreaView(pageWidth: CGFloat, size: CGSize) -> some View {
+        let slotWidth = max(0, size.width - 40)
+        let slotHeight = max(0, size.height - 32)
+        let heroWidth = slotWidth
+        let heroHeight = heroWidth * (284 / 335)
+        let freeVerticalSpace = max(0, slotHeight - heroHeight)
+        let verticalNudge = min(18, freeVerticalSpace / 2)
+
+        return ZStack(alignment: .bottom) {
             ZStack {
                 ForEach(items.indices, id: \.self) { index in
-                    let visibility = pageVisibility(
-                        for: index,
-                        pageWidth: geometry.size.width
-                    )
-
-                    Image(items[index].imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(
-                            width: geometry.size.width * 1.18,
-                            height: min(geometry.size.width * 1.04, 410)
-                        )
-                        .scaleEffect(1.28)
-                        .saturation(colorScheme == .dark ? 1.35 : 1.55)
-                        .contrast(0.72)
-                        .brightness(colorScheme == .dark ? 0.10 : 0.05)
-                        .blur(radius: 82)
-                        .opacity(visibility * ambientLightOpacity)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .mask {
-                LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.68),
-                        .init(color: .clear, location: 1)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
-            .animation(ambientAnimation, value: currentIndex)
-        }
-        .frame(height: 440)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .ignoresSafeArea(edges: .top)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    private var heroView: some View {
-        GeometryReader { geometry in
-            let width = min(geometry.size.width * (305 / 375), 340)
-            let height = width * (263 / 305)
-
-            ZStack {
-                ForEach(items.indices, id: \.self) { index in
+                    let item = items[index]
                     let isActive = index == currentIndex
+                    let relativePage = reduceMotion
+                        ? CGFloat(index - currentIndex)
+                        : relativePage(for: index, pageWidth: pageWidth)
+                    let visibility = pageVisibility(for: index, pageWidth: pageWidth)
 
-                    Image(items[index].imageName)
+                    Image(item.imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 256, height: 256, alignment: item.imageAlignment)
+                        .clipped()
+                        .scaleEffect(1.08)
+                        .saturation(colorScheme == .dark ? 1.18 : 1.30)
+                        .blur(radius: 42)
+                        .opacity(visibility * (colorScheme == .dark ? 0.20 : 0.14))
+
+                    Image(item.imageName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(
-                            width: width,
-                            height: height,
-                            alignment: items[index].imageAlignment
+                            width: heroWidth,
+                            height: heroHeight,
+                            alignment: item.imageAlignment
                         )
                         .clipped()
                         .modifier(
                             IllustrationArcCarouselModifier(
-                                relativePage: reduceMotion
-                                    ? 0
-                                    : relativePage(
-                                        for: index,
-                                        pageWidth: geometry.size.width
-                                    ),
-                                pageWidth: geometry.size.width,
+                                relativePage: reduceMotion ? 0 : relativePage,
+                                pageWidth: pageWidth,
                                 arcHeight: 64
                             )
                         )
                         .opacity(reduceMotion ? (isActive ? 1 : 0) : 1)
                 }
             }
-            .frame(width: width, height: height)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .animation(pageAnimation, value: currentIndex)
+            .frame(width: heroWidth, height: heroHeight)
+            .position(
+                x: size.width / 2,
+                y: 32 + freeVerticalSpace / 2 + verticalNudge + heroHeight / 2
+            )
+
+            LinearGradient(
+                colors: [backgroundColor.opacity(0), backgroundColor],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 80)
         }
-        .padding(.top, 123)
+        .frame(width: size.width, height: size.height)
+        .animation(pageAnimation, value: currentIndex)
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
-    private var controlsView: some View {
-        VStack(spacing: 0) {
-            copyView
-                .frame(height: 104)
+    private func bottomView(
+        pageWidth: CGFloat,
+        bottomSafeArea: CGFloat
+    ) -> some View {
+        ZStack(alignment: .top) {
+            copyView(pageWidth: pageWidth)
+                .frame(height: Self.maximumCopyHeight, alignment: .top)
+                .padding(.top, 32)
+                .padding(.horizontal, 16)
 
-            Spacer()
-                .frame(height: 34)
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
 
-            indicatorView
-                .frame(height: 16)
+                indicatorView(pageWidth: pageWidth)
+                    .padding(.bottom, 12)
 
-            Spacer()
-                .frame(height: 16)
+                VStack(spacing: 0) {
+                    continueButton
 
-            continueButton
+                    if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
+                        secondaryButton(title: secondaryButtonTitle)
+                            .padding(.top, Self.twoButtonSpacing)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(
+                    .bottom,
+                    items[currentIndex].secondaryButtonTitle == nil ? 24 : 20
+                )
+
+                Color.clear
+                    .frame(height: bottomSafeArea)
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 24)
     }
 
-    private var copyView: some View {
+    private func copyView(pageWidth: CGFloat) -> some View {
         GeometryReader { geometry in
-            ZStack {
+            ZStack(alignment: .top) {
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
                     let relativePage = reduceMotion
                         ? CGFloat(index - currentIndex)
-                        : relativePage(for: index, pageWidth: geometry.size.width)
+                        : relativePage(for: index, pageWidth: pageWidth)
                     let distance = min(abs(relativePage), 1)
 
-                    VStack(spacing: 8) {
+                    VStack(spacing: Self.copySpacing) {
                         Text(item.title)
                             .font(.system(size: 20, weight: .bold))
                             .tracking(0.38)
-                            .lineLimit(2)
+                            .lineLimit(Self.maximumTitleLines)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(primaryTextColor)
@@ -292,17 +342,21 @@ private struct IllustrationStyleOnboarding: View {
                         Text(item.subtitle)
                             .font(.system(size: 17, weight: .regular))
                             .tracking(-0.41)
-                            .lineLimit(2)
+                            .lineLimit(Self.maximumSubtitleLines)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(secondaryTextColor)
                     }
-                    .frame(width: geometry.size.width)
+                    .frame(
+                        width: geometry.size.width,
+                        height: Self.maximumCopyHeight,
+                        alignment: .top
+                    )
                     .compositingGroup()
                     .offset(
                         x: reduceMotion
                             ? 0
-                            : relativePage * geometry.size.width
+                            : relativePage * pageWidth
                     )
                     .blur(radius: 30 * distance)
                     .opacity(1 - distance)
@@ -312,51 +366,65 @@ private struct IllustrationStyleOnboarding: View {
         }
     }
 
-    private var indicatorView: some View {
-        HStack(spacing: 6) {
+    private func indicatorView(pageWidth: CGFloat) -> some View {
+        HStack(spacing: 7) {
             ForEach(items.indices, id: \.self) { index in
-                let isActive = index == currentIndex
+                let visibility = pageVisibility(for: index, pageWidth: pageWidth)
 
-                Capsule()
-                    .fill(isActive ? pageIndicatorActiveColor : pageIndicatorInactiveColor)
-                    .frame(width: isActive ? 25 : 6, height: 6)
+                Circle()
+                    .fill(pageIndicatorInactiveColor)
+                    .overlay {
+                        Circle()
+                            .fill(pageIndicatorActiveColor)
+                            .opacity(visibility)
+                    }
+                    .frame(width: 6, height: 6)
             }
         }
-        .animation(pageAnimation, value: currentIndex)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(backgroundColor.opacity(0.3), in: Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Страница \(currentIndex + 1) из \(items.count)")
     }
 
     private var continueButton: some View {
         Button {
-            withAnimation(pageAnimation) {
-                currentIndex = currentIndex == items.count - 1 ? 0 : currentIndex + 1
-            }
+            transition(to: currentIndex == items.count - 1 ? 0 : currentIndex + 1)
         } label: {
             Text(items[currentIndex].buttonTitle)
                 .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(Color(red: 51 / 255, green: 51 / 255, blue: 51 / 255))
+                .foregroundStyle(Color("TUITextPrimaryOnAccent1"))
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .contentShape(Rectangle())
-                .modifier(OnboardingYellowButtonSurfaceModifier())
-                .transaction { transaction in
-                    transaction.animation = nil
-                }
+                .modifier(InterfacePrimaryButtonSurfaceModifier())
+        }
+        .buttonStyle(InterfacePrimaryButtonStyle())
+    }
+
+    private func secondaryButton(title: String) -> some View {
+        Button {
+            // The Figma component defines the secondary action visually only.
+        } label: {
+            Text(title)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255))
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
-    private var backButton: some View {
+    private func backButton(topInset: CGFloat) -> some View {
         Button {
             guard currentIndex > 0 else {
                 onBackFromFirstPage()
                 return
             }
 
-            withAnimation(pageAnimation) {
-                currentIndex -= 1
-            }
+            transition(to: currentIndex - 1)
         } label: {
             Image(systemName: "chevron.left")
                 .font(.title3)
@@ -365,9 +433,10 @@ private struct IllustrationStyleOnboarding: View {
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
         .foregroundStyle(primaryTextColor)
+        .accessibilityLabel("Назад")
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.leading, 16)
-        .padding(.top, 16)
+        .padding(.top, topInset)
     }
 
     private func relativePage(for index: Int, pageWidth: CGFloat) -> CGFloat {
@@ -420,11 +489,33 @@ private struct IllustrationStyleOnboarding: View {
                     targetIndex = max(currentIndex - 1, 0)
                 }
 
+                if targetIndex != currentIndex {
+                    swipeHapticTrigger += 1
+                }
+
                 withAnimation(pageAnimation) {
                     currentIndex = targetIndex
                     dragTranslation = 0
                 }
             }
+    }
+
+    private func fixedBottomHeight(bottomSafeArea: CGFloat) -> CGFloat {
+        let safeAreaDelta = max(0, bottomSafeArea - 34)
+        return Self.fixedBottomReferenceHeight + safeAreaDelta
+    }
+
+    private func transition(to targetIndex: Int) {
+        guard items.indices.contains(targetIndex), targetIndex != currentIndex else {
+            return
+        }
+
+        withAnimation(pageAnimation) {
+            currentIndex = targetIndex
+            dragTranslation = 0
+        }
+
+        swipeHapticTrigger += 1
     }
 
     private var backgroundColor: Color {
@@ -451,27 +542,41 @@ private struct IllustrationStyleOnboarding: View {
             : Color(red: 0, green: 16 / 255, blue: 36 / 255).opacity(0.12)
     }
 
-    private var ambientLightOpacity: Double {
-        colorScheme == .dark ? 0.34 : 0.40
-    }
-
     private var pageAnimation: Animation {
         reduceMotion
             ? .easeInOut(duration: 0.2)
             : .interpolatingSpring(duration: 0.65, bounce: 0, initialVelocity: 0)
     }
 
-    private var ambientAnimation: Animation {
-        .easeInOut(duration: reduceMotion ? 0.2 : 0.68)
-    }
-
     struct Item: Identifiable {
+        enum TextLayout {
+            case maximum
+            case medium
+            case minimum
+            case twoButtons
+
+            var referenceBottomHeight: CGFloat {
+                switch self {
+                case .maximum:
+                    336
+                case .medium:
+                    316
+                case .minimum:
+                    252
+                case .twoButtons:
+                    364
+                }
+            }
+        }
+
         let id: Int
         let title: String
         let subtitle: String
         let imageName: String
         var imageAlignment: Alignment = .center
         let buttonTitle: String
+        var secondaryButtonTitle: String? = nil
+        let textLayout: TextLayout
     }
 }
 
