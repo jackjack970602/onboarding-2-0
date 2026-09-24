@@ -1159,39 +1159,38 @@ private struct InterfaceOnboardingView: View {
             items: [
                 .init(
                     id: 0,
-                    title: "Встречайте редизайн",
-                    subtitle: "Фокусируем внимание\nна действительно важном",
+                    title: "Когда ж ты блять поймешь",
+                    subtitle: "Здесь мы пишем что-то необходимое.\nПостарайтесь уложиться в 2–3 строки\nМаксимум в 4",
                     media: .video(
                         poster: UIImage(named: "OnboardingScreen1"),
                         resourceName: "OnboardingInterface1Light",
                         darkResourceName: "OnboardingInterface1Dark"
-                    )
+                    ),
+                    buttonTitle: "Далее"
                 ),
                 .init(
                     id: 1,
-                    title: "Если важных счетов больше",
-                    subtitle: "Переключайтесь на другое\nотображения главной",
-                    media: .image(poster: UIImage(named: "OnboardingScreen2"))
+                    title: "Мне кажется, или нет, и снова все\nпошло по одному месте",
+                    subtitle: "Вот тебе макс стейт. Как видишь, все\nтексты у нас начинаются на одной и той\nже высоте. Что этот, что предыдущий, что\nследующий",
+                    media: .image(poster: UIImage(named: "OnboardingScreen2")),
+                    buttonTitle: "Далее"
                 ),
                 .init(
                     id: 2,
-                    title: "Новое нижнее меню",
-                    subtitle: "Все необходимое всегда\nпод рукой",
+                    title: "Наблюдай",
+                    subtitle: "Разве это похоже на то, что было сделано\nв прототипе?",
                     media: .image(poster: UIImage(named: "OnboardingScreen4")),
-                    phonePresentation: .largeBottom
+                    phonePresentation: .largeBottom,
+                    buttonTitle: "Далее"
                 ),
                 .init(
                     id: 3,
-                    title: "Центр уведомлений",
-                    subtitle: "Собрали все события\nв одном месте",
+                    title: "Теперь я надеюсь тебе стало\nпонятнее",
+                    subtitle: "Вот так должно быть. исключение\n— только слайд с двумя кнопками",
                     media: .image(poster: UIImage(named: "OnboardingScreen3")),
-                    phonePresentation: .largeTop
-                ),
-                .init(
-                    id: 4,
-                    title: "Настраивайте под себя",
-                    subtitle: "Выберите отображение главной\nи необходимые счета",
-                    media: .image(poster: UIImage(named: "OnboardingScreen5"))
+                    phonePresentation: .largeTop,
+                    buttonTitle: "Далее",
+                    secondaryButtonTitle: "Secondary action"
                 )
             ],
             onBackFromFirstPage: { dismiss() }
@@ -1201,6 +1200,11 @@ private struct InterfaceOnboardingView: View {
 }
 
 private struct IOS26StyleOnboarding: View {
+    // The Figma reference uses a 472 pt picture area on a 812 pt screen.
+    // The bottom area stays fixed while any additional screen height is
+    // absorbed by the picture area, keeping both regions contiguous.
+    private let bottomAreaHeight: CGFloat = 340
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
@@ -1215,40 +1219,40 @@ private struct IOS26StyleOnboarding: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let pictureAreaHeight = max(360, geometry.size.height - 328)
             let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
             let topSafeArea = max(geometry.safeAreaInsets.top, 44)
+            let pictureAreaHeight = max(
+                0,
+                geometry.size.height - bottomAreaHeight
+            )
 
             ZStack(alignment: .top) {
                 backgroundColor
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    pictureAreaView(
-                        pageWidth: geometry.size.width,
-                        size: CGSize(
-                            width: geometry.size.width,
-                            height: pictureAreaHeight
-                        )
+                pictureAreaView(
+                    pageWidth: geometry.size.width,
+                    size: CGSize(
+                        width: geometry.size.width,
+                        height: pictureAreaHeight
                     )
-                    .frame(height: pictureAreaHeight)
-                    .clipped()
+                )
+                .frame(height: pictureAreaHeight)
+                .clipped()
+                .frame(maxHeight: .infinity, alignment: .top)
 
-                    VStack(spacing: 0) {
-                        textContentView(pageWidth: geometry.size.width)
-                            .frame(height: 116)
+                bottomView(
+                    pageWidth: geometry.size.width,
+                    bottomSafeArea: bottomSafeArea
+                )
+                .frame(height: bottomAreaHeight)
+                .background(backgroundColor)
+                .frame(maxHeight: .infinity, alignment: .bottom)
 
-                        indicatorView(pageWidth: geometry.size.width)
-                            .padding(.top, 32)
-
-                        continueButton
-                            .padding(.top, 15)
-                    }
+                textContentView(pageWidth: geometry.size.width)
+                    .frame(height: 132)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 24 + bottomSafeArea)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .background(backgroundColor)
-                }
+                    .offset(y: pictureAreaHeight + 32)
 
                 backButton(topInset: topSafeArea)
             }
@@ -1257,6 +1261,34 @@ private struct IOS26StyleOnboarding: View {
             .sensoryFeedback(.selection, trigger: swipeHapticTrigger)
         }
         .ignoresSafeArea()
+    }
+
+    private func bottomView(
+        pageWidth: CGFloat,
+        bottomSafeArea: CGFloat
+    ) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            indicatorView(pageWidth: pageWidth)
+                .padding(.bottom, 12)
+
+            VStack(spacing: 0) {
+                continueButton
+
+                if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
+                    secondaryButton(title: secondaryButtonTitle)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(
+                .bottom,
+                items[currentIndex].secondaryButtonTitle == nil ? 24 : 20
+            )
+
+            Color.clear
+                .frame(height: bottomSafeArea)
+        }
     }
 
     private func pictureAreaView(pageWidth: CGFloat, size: CGSize) -> some View {
@@ -1365,11 +1397,13 @@ private struct IOS26StyleOnboarding: View {
         .clipped()
     }
 
-    private func textContentView(pageWidth: CGFloat) -> some View {
+    private func textContentView(
+        pageWidth: CGFloat
+    ) -> some View {
         GeometryReader { geometry in
             let size = geometry.size
 
-            ZStack {
+            ZStack(alignment: .top) {
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
                     let relativePage = relativePage(for: index, pageWidth: pageWidth)
@@ -1394,7 +1428,9 @@ private struct IOS26StyleOnboarding: View {
                     }
                     .frame(width: size.width)
                     .compositingGroup()
-                    .offset(x: relativePage * pageWidth)
+                    .offset(
+                        x: reduceMotion ? 0 : relativePage * pageWidth
+                    )
                     .blur(radius: reduceMotion ? 0 : 30 * distance)
                     .opacity(1 - distance)
                 }
@@ -1430,7 +1466,7 @@ private struct IOS26StyleOnboarding: View {
         Button {
             transition(to: currentIndex == items.count - 1 ? 0 : currentIndex + 1)
         } label: {
-            Text(currentIndex == items.count - 1 ? "Настроить" : "Далее")
+            Text(items[currentIndex].buttonTitle)
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Color("TUITextPrimaryOnAccent1"))
                 .frame(maxWidth: .infinity)
@@ -1439,6 +1475,21 @@ private struct IOS26StyleOnboarding: View {
                 .modifier(InterfacePrimaryButtonSurfaceModifier())
         }
         .buttonStyle(InterfacePrimaryButtonStyle())
+        .frame(maxWidth: 355)
+    }
+
+    private func secondaryButton(title: String) -> some View {
+        Button {
+            // The Figma component defines the secondary action visually only.
+        } label: {
+            Text(title)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255))
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .frame(maxWidth: 355)
     }
 
@@ -1651,6 +1702,8 @@ private struct IOS26StyleOnboarding: View {
         var subtitle: String
         var media: OnboardingMedia
         var phonePresentation: PhonePresentation = .default
+        var buttonTitle: String
+        var secondaryButtonTitle: String? = nil
     }
 
     fileprivate struct PhoneLayout {
@@ -1660,6 +1713,8 @@ private struct IOS26StyleOnboarding: View {
 
     // Mirrors the three iOS phone variants from the Figma component.
     enum PhonePresentation: Equatable {
+        private static let defaultBottomInset: CGFloat = 16
+
         case `default`
         case largeTop
         case largeBottom
@@ -1668,12 +1723,10 @@ private struct IOS26StyleOnboarding: View {
             switch self {
             case .default:
                 let size = CGSize(width: 198, height: 406)
-                let slotTop: CGFloat = 32
-                let slotHeight = max(0, pictureAreaHeight - slotTop)
 
                 return PhoneLayout(
                     size: size,
-                    top: slotTop + max(0, (slotHeight - size.height) / 2)
+                    top: pictureAreaHeight - Self.defaultBottomInset - size.height
                 )
             case .largeTop:
                 return PhoneLayout(
