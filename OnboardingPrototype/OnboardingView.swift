@@ -1305,10 +1305,11 @@ private struct InterfaceOnboardingView: View {
 }
 
 private struct IOS26StyleOnboarding: View {
-    // The Figma reference uses a 472 pt picture area on a 812 pt screen.
-    // The bottom area stays fixed while any additional screen height is
-    // absorbed by the picture area, keeping both regions contiguous.
-    private let bottomAreaHeight: CGFloat = 340
+    // Figma uses separate fixed states: 340 pt with one action and 376 pt
+    // with two actions. The extra 36 pt in the two-action state belongs above
+    // the text, while the pager and controls keep their screen position.
+    private let oneButtonBottomAreaHeight: CGFloat = 340
+    private let twoButtonBottomAreaHeight: CGFloat = 376
     private let twoButtonSpacing: CGFloat = 16
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -1327,6 +1328,11 @@ private struct IOS26StyleOnboarding: View {
         GeometryReader { geometry in
             let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
             let topSafeArea = max(geometry.safeAreaInsets.top, 44)
+            let hasSecondaryAction =
+                items[currentIndex].secondaryButtonTitle != nil
+            let bottomAreaHeight = hasSecondaryAction
+                ? twoButtonBottomAreaHeight
+                : oneButtonBottomAreaHeight
             let pictureAreaHeight = max(
                 0,
                 geometry.size.height - bottomAreaHeight
