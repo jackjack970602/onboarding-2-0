@@ -1309,6 +1309,7 @@ private struct IOS26StyleOnboarding: View {
     // The bottom area stays fixed while any additional screen height is
     // absorbed by the picture area, keeping both regions contiguous.
     private let bottomAreaHeight: CGFloat = 340
+    private let twoButtonSpacing: CGFloat = 16
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -1383,6 +1384,7 @@ private struct IOS26StyleOnboarding: View {
 
                 if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
                     secondaryButton(title: secondaryButtonTitle)
+                        .padding(.top, twoButtonSpacing)
                 }
             }
             .padding(.horizontal, 16)
