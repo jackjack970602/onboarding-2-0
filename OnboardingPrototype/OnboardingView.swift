@@ -338,7 +338,6 @@ private struct IllustrationStyleOnboarding: View {
                         Text(item.title)
                             .font(.system(size: 20, weight: .bold))
                             .tracking(0.38)
-                            .lineLimit(Self.maximumTitleLines)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(primaryTextColor)
@@ -346,7 +345,6 @@ private struct IllustrationStyleOnboarding: View {
                         Text(item.subtitle)
                             .font(.system(size: 17, weight: .regular))
                             .tracking(-0.41)
-                            .lineLimit(Self.maximumSubtitleLines)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(secondaryTextColor)
@@ -802,18 +800,15 @@ private struct BottomSheetOnboardingView: View {
     private let items: [BottomSheetStyleOnboarding.Item] = [
         .init(
             id: 0,
-            title: "Новый онбординг",
-            subtitle: "Умеет показывать вверх телефона",
-            media: .phone(
-                imageName: "OnboardingScreen2",
-                viewport: .top
-            ),
+            title: "Следите за всем важным",
+            subtitle: "Все нужные обновления в одном месте",
+            media: .illustration,
             buttonTitle: "Далее"
         ),
         .init(
             id: 1,
-            title: "Продолжение онбординга",
-            subtitle: "Умеет показывать низ телефон",
+            title: "Все важные обновления\nтеперь всегда под рукой",
+            subtitle: "Следите за новыми возможностями,\nбыстро находите нужные функции\nи управляйте всем в одном месте",
             media: .phone(
                 imageName: "OnboardingScreen4",
                 viewport: .bottom
@@ -822,28 +817,38 @@ private struct BottomSheetOnboardingView: View {
         ),
         .init(
             id: 2,
-            title: "И напоследок",
-            subtitle: "Умеет показывать картинку",
-            media: .illustration,
-            buttonTitle: "Спасибо"
+            title: "Выбирайте удобный способ\nи продолжайте без лишних шагов",
+            subtitle: "Настройте всё под себя\nили вернитесь к этому позже",
+            media: .phone(
+                imageName: "OnboardingScreen2",
+                viewport: .top
+            ),
+            buttonTitle: "Далее",
+            secondaryButtonTitle: "Secondary action"
         )
     ]
 
     var body: some View {
-        Color.clear
-            .overlay {
-                Image("OnboardingBottomSheetBackground")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            }
-            .clipped()
-            .ignoresSafeArea()
-            .toolbar(.hidden, for: .navigationBar)
-            .statusBarHidden(true)
-            .task { isSheetPresented = true }
-            .sheet(isPresented: $isSheetPresented, onDismiss: { dismiss() }) {
-                BottomSheetStyleOnboarding(items: items)
-            }
+        GeometryReader { geometry in
+            Color.clear
+                .overlay {
+                    Image("OnboardingBottomSheetBackground")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                }
+                .clipped()
+                .sheet(isPresented: $isSheetPresented, onDismiss: { dismiss() }) {
+                    BottomSheetStyleOnboarding(
+                        items: items,
+                        screenWidth: geometry.size.width,
+                        onClose: { isSheetPresented = false }
+                    )
+                }
+        }
+        .ignoresSafeArea()
+        .toolbar(.hidden, for: .navigationBar)
+        .statusBarHidden(true)
+        .task { isSheetPresented = true }
     }
 }
 
@@ -852,13 +857,20 @@ private struct BottomSheetStyleOnboarding: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let items: [Item]
+    let screenWidth: CGFloat
+    let onClose: () -> Void
 
     @State private var currentIndex = 0
     @State private var dragTranslation: CGFloat = 0
 
-    private let sheetContentHeight: CGFloat = 472
-    private let sheetBottomPadding: CGFloat = 20
-    private let sheetDetentHeight: CGFloat = 465
+    private let mediaHeight: CGFloat = 284
+    private let copySpacing: CGFloat = 8
+    private let minimumCopyToPagerSpacing: CGFloat = 32
+    private let pagerHeight: CGFloat = 32
+    private let secondaryButtonSpacing: CGFloat = 8
+    private let homeIndicatorInset: CGFloat = 34
+    private let sheetHorizontalPadding: CGFloat = 0.8
+    private let copyHorizontalPadding: CGFloat = 20
 
     var body: some View {
         GeometryReader { geometry in
@@ -866,37 +878,139 @@ private struct BottomSheetStyleOnboarding: View {
 
             VStack(spacing: 0) {
                 mediaCarousel(pageWidth: pageWidth)
-                    .frame(height: 300)
+                    .frame(height: mediaHeight)
                     .clipped()
                     .contentShape(Rectangle())
                     .simultaneousGesture(pageDragGesture(pageWidth: pageWidth))
 
                 copyView(pageWidth: pageWidth)
-                    .frame(height: 77)
-                    .padding(.horizontal, 16)
-                    .background(sheetBackgroundColor)
-                    .overlay(alignment: .top) {
-                        mediaDivider(pageWidth: pageWidth)
-                            .padding(.horizontal, 16)
-                    }
+                    .frame(
+                        height: copyHeight(for: items[currentIndex]),
+                        alignment: .top
+                    )
+                    .padding(.top, 20)
+                    .padding(.horizontal, copyHorizontalPadding)
+
+                Color.clear
+                    .frame(
+                        height: copyToPagerSpacing(for: items[currentIndex])
+                    )
 
                 indicatorView(pageWidth: pageWidth)
-                    .padding(.top, 13)
 
-                continueButton
-                    .padding(.top, 20)
-                    .padding(.horizontal, 20)
+                actionButtons
+                    .padding(.horizontal, 16)
+                    .padding(
+                        .bottom,
+                        actionButtonsBottomPadding(for: items[currentIndex])
+                    )
             }
-            .frame(
-                height: sheetContentHeight + sheetBottomPadding,
-                alignment: .top
-            )
+            .padding(.top, 12)
+            .padding(.bottom, 20)
+            .padding(.horizontal, sheetHorizontalPadding)
+            .frame(height: sheetHeight, alignment: .top)
             .frame(maxHeight: .infinity, alignment: .top)
             .ignoresSafeArea(.container, edges: .bottom)
+            .animation(pageAnimation, value: hasSecondaryAction)
         }
         .presentationDetents([.height(sheetDetentHeight)])
         .presentationBackground(sheetBackgroundColor)
-        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(36)
+        .presentationDragIndicator(.hidden)
+    }
+
+    private var sheetHeight: CGFloat {
+        ceil(items.map { requiredSheetHeight(for: $0) }.max() ?? minimumSheetHeight)
+    }
+
+    private var sheetDetentHeight: CGFloat {
+        max(1, sheetHeight - homeIndicatorInset)
+    }
+
+    private var minimumSheetHeight: CGFloat {
+        12
+            + mediaHeight
+            + 20
+            + minimumCopyToPagerSpacing
+            + pagerHeight
+            + 56
+            + 24
+            + 20
+    }
+
+    private func requiredSheetHeight(for item: Item) -> CGFloat {
+        12
+            + mediaHeight
+            + 20
+            + copyHeight(for: item)
+            + minimumCopyToPagerSpacing
+            + pagerHeight
+            + actionButtonsHeight(for: item)
+            + actionButtonsBottomPadding(for: item)
+            + 20
+    }
+
+    private func actionButtonsHeight(for item: Item) -> CGFloat {
+        56 + (item.secondaryButtonTitle == nil ? 0 : secondaryButtonSpacing + 56)
+    }
+
+    private func actionButtonsBottomPadding(for item: Item) -> CGFloat {
+        item.secondaryButtonTitle == nil ? 24 : 16
+    }
+
+    private func copyToPagerSpacing(for item: Item) -> CGFloat {
+        minimumCopyToPagerSpacing
+            + max(0, sheetHeight - requiredSheetHeight(for: item))
+    }
+
+    private var hasSecondaryAction: Bool {
+        items[currentIndex].secondaryButtonTitle != nil
+    }
+
+    private func copyHeight(for item: Item) -> CGFloat {
+        measuredTextHeight(
+            item.title,
+            font: .systemFont(ofSize: 20, weight: .bold),
+            tracking: 0.38
+        )
+            + copySpacing
+            + measuredTextHeight(
+                item.subtitle,
+                font: .systemFont(ofSize: 17, weight: .regular),
+                tracking: -0.41
+            )
+    }
+
+    private func measuredTextHeight(
+        _ text: String,
+        font: UIFont,
+        tracking: CGFloat
+    ) -> CGFloat {
+        let availableWidth = max(
+            1,
+            screenWidth
+                - sheetHorizontalPadding * 2
+                - copyHorizontalPadding * 2
+        )
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.lineBreakMode = .byWordWrapping
+
+        let bounds = (text as NSString).boundingRect(
+            with: CGSize(
+                width: availableWidth,
+                height: CGFloat.greatestFiniteMagnitude
+            ),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [
+                .font: font,
+                .kern: tracking,
+                .paragraphStyle: paragraphStyle
+            ],
+            context: nil
+        )
+
+        return ceil(bounds.height)
     }
 
     private func mediaCarousel(pageWidth: CGFloat) -> some View {
@@ -922,29 +1036,17 @@ private struct BottomSheetStyleOnboarding: View {
                         )
                     )
                     .opacity(reduceMotion ? (isActive ? 1 : 0) : 1)
+                    .accessibilityHidden(true)
                 }
+
+                closeButton
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.top, 16)
+                    .padding(.leading, 16)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(pageAnimation, value: currentIndex)
         }
-        .accessibilityHidden(true)
-    }
-
-    private func mediaDivider(pageWidth: CGFloat) -> some View {
-        LinearGradient(
-            stops: [
-                .init(color: mediaDividerColor.opacity(0), location: 0),
-                .init(color: mediaDividerColor.opacity(0.10), location: 0.20),
-                .init(color: mediaDividerColor.opacity(0.10), location: 0.80),
-                .init(color: mediaDividerColor.opacity(0), location: 1)
-            ],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-        .frame(height: 1)
-        .opacity(mediaDividerVisibility(pageWidth: pageWidth))
-        .animation(mediaDividerAnimation, value: currentIndex)
-        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -954,121 +1056,164 @@ private struct BottomSheetStyleOnboarding: View {
     ) -> some View {
         switch media {
         case let .phone(imageName, viewport):
-            let outerWidth = min(availableSize.width - 54, 222)
-            let outerHeight = phoneOuterHeight(for: outerWidth)
-            let yOffset = switch viewport {
+            let phoneSize = CGSize(width: 198, height: 406)
+            let phoneTop = switch viewport {
             case .top:
-                CGFloat(44)
+                CGFloat(24)
             case .bottom:
-                availableSize.height - 24 - outerHeight
+                CGFloat(-134)
             }
 
-            phoneScreen(imageName: imageName, outerWidth: outerWidth)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .top
+            ZStack(alignment: .top) {
+                FigmaPhoneMockupFrame(size: phoneSize) { viewportSize in
+                    Image(imageName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(
+                            width: viewportSize.width,
+                            height: viewportSize.height
+                        )
+                        .clipped()
+                }
+                .position(
+                    x: availableSize.width / 2 - 1,
+                    y: phoneTop + phoneSize.height / 2
                 )
-                .offset(y: yOffset)
+            }
+            .frame(width: availableSize.width, height: availableSize.height)
+            .compositingGroup()
+            .mask {
+                phoneVisibilityMask(for: viewport)
+            }
 
         case .illustration:
-            let illustrationWidth = min(availableSize.width - 54, 313) * 0.9
-
             Image("OnboardingBottomSheetIllustration")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: illustrationWidth)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .top
-                )
-                .offset(y: 15)
+                .frame(width: availableSize.width, height: availableSize.height)
         }
     }
 
-    private func phoneScreen(imageName: String, outerWidth: CGFloat) -> some View {
-        let frameInset: CGFloat = 7
-        let screenWidth = outerWidth - frameInset * 2
-        let screenSize = CGSize(
-            width: screenWidth,
-            height: screenWidth * (2622 / 1206)
-        )
+    @ViewBuilder
+    private func phoneVisibilityMask(
+        for viewport: Item.Media.PhoneViewport
+    ) -> some View {
+        switch viewport {
+        case .top:
+            LinearGradient(
+                stops: [
+                    .init(color: .white, location: 0),
+                    .init(color: .white, location: 236 / mediaHeight),
+                    .init(color: .white.opacity(0.88), location: 246 / mediaHeight),
+                    .init(color: .white.opacity(0.45), location: 266 / mediaHeight),
+                    .init(color: .clear, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
 
-        return OnboardingDeviceFrame(size: screenSize) {
-            Image(imageName)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: screenSize.width, height: screenSize.height)
+        case .bottom:
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .white.opacity(0.20), location: 10 / mediaHeight),
+                    .init(color: .white.opacity(0.55), location: 32 / mediaHeight),
+                    .init(color: .white.opacity(0.85), location: 58 / mediaHeight),
+                    .init(color: .white, location: 80 / mediaHeight),
+                    .init(color: .white, location: 1)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
-        .padding(frameInset)
     }
 
-    private func phoneOuterHeight(for outerWidth: CGFloat) -> CGFloat {
-        let frameInset: CGFloat = 7
-        let screenWidth = outerWidth - frameInset * 2
-        return screenWidth * (2622 / 1206) + frameInset * 2
+    private var closeButton: some View {
+        Button(action: onClose) {
+            Image(systemName: "xmark")
+                .font(.system(size: 24, weight: .regular))
+                .foregroundStyle(primaryTextColor)
+                .frame(width: 44, height: 44)
+                .background(.ultraThinMaterial, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Закрыть")
     }
 
     private func copyView(pageWidth: CGFloat) -> some View {
-        GeometryReader { geometry in
-            ZStack {
-                ForEach(items.indices, id: \.self) { index in
-                    let item = items[index]
-                    let relativePage = reduceMotion
-                        ? CGFloat(index - currentIndex)
-                        : relativePage(for: index, pageWidth: pageWidth)
-                    let distance = min(abs(relativePage), 1)
-
-                    VStack(spacing: 8) {
-                        Text(item.title)
-                            .font(.system(size: 20, weight: .bold))
-                            .tracking(0.38)
-                            .lineLimit(1)
-                            .foregroundStyle(primaryTextColor)
-
-                        Text(item.subtitle)
-                            .font(.system(size: 17, weight: .regular))
-                            .tracking(-0.41)
-                            .lineLimit(1)
-                            .foregroundStyle(secondaryTextColor)
-                    }
-                    .frame(width: geometry.size.width)
-                    .compositingGroup()
-                    .offset(
-                        x: reduceMotion
-                            ? 0
-                            : relativePage * pageWidth
-                    )
-                    .blur(radius: 30 * distance)
-                    .opacity(1 - distance)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(pageAnimation, value: currentIndex)
-        }
-    }
-
-    private func indicatorView(pageWidth: CGFloat) -> some View {
-        HStack(spacing: 6) {
+        ZStack(alignment: .top) {
             ForEach(items.indices, id: \.self) { index in
-                let visibility = reduceMotion
-                    ? (index == currentIndex ? 1.0 : 0.0)
-                    : pageVisibility(for: index, pageWidth: pageWidth)
+                let item = items[index]
+                let relativePage = reduceMotion
+                    ? CGFloat(index - currentIndex)
+                    : relativePage(for: index, pageWidth: pageWidth)
+                let distance = min(abs(relativePage), 1)
 
-                Capsule()
-                    .fill(pageIndicatorInactiveColor)
-                    .overlay {
-                        Capsule()
-                            .fill(pageIndicatorActiveColor)
-                            .opacity(visibility)
-                    }
-                    .frame(width: 6 + 19 * visibility, height: 6)
+                VStack(spacing: 8) {
+                    Text(item.title)
+                        .font(.system(size: 20, weight: .bold))
+                        .tracking(0.38)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(primaryTextColor)
+
+                    Text(item.subtitle)
+                        .font(.system(size: 17, weight: .regular))
+                        .tracking(-0.41)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .foregroundStyle(secondaryTextColor)
+                }
+                .frame(maxWidth: .infinity)
+                .compositingGroup()
+                .offset(
+                    x: reduceMotion
+                        ? 0
+                        : relativePage * pageWidth
+                )
+                .blur(radius: 30 * distance)
+                .opacity(1 - distance)
             }
         }
         .animation(pageAnimation, value: currentIndex)
+    }
+
+    private func indicatorView(pageWidth: CGFloat) -> some View {
+        HStack(spacing: 7) {
+            ForEach(items.indices, id: \.self) { index in
+                let visibility = pageVisibility(for: index, pageWidth: pageWidth)
+
+                Circle()
+                    .fill(pageIndicatorInactiveColor)
+                    .overlay {
+                        Circle()
+                            .fill(pageIndicatorActiveColor)
+                            .opacity(visibility)
+                    }
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(sheetBackgroundColor.opacity(0.3), in: Capsule())
+        .frame(height: 24)
+        .padding(.bottom, 8)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Страница \(currentIndex + 1) из \(items.count)")
+    }
+
+    private var actionButtons: some View {
+        VStack(spacing: 0) {
+            continueButton
+
+            if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
+                secondaryButton(title: secondaryButtonTitle)
+                    .padding(.top, secondaryButtonSpacing)
+                    .transition(secondaryButtonTransition)
+            }
+        }
+        .animation(pageAnimation, value: hasSecondaryAction)
     }
 
     private var continueButton: some View {
@@ -1089,12 +1234,36 @@ private struct BottomSheetStyleOnboarding: View {
                 .frame(height: 56)
                 .contentShape(Rectangle())
                 .modifier(OnboardingYellowButtonSurfaceModifier())
-                .transaction { transaction in
-                    transaction.animation = nil
-                }
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity)
+    }
+
+    private func secondaryButton(title: String) -> some View {
+        Button {
+            // The design defines the secondary action visually only.
+        } label: {
+            Text(title)
+                .font(.system(size: 17, weight: .regular))
+                .foregroundStyle(
+                    Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255)
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var secondaryButtonTransition: AnyTransition {
+        guard !reduceMotion else {
+            return .opacity
+        }
+
+        return .asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .move(edge: .bottom).combined(with: .opacity)
+        )
     }
 
     private func relativePage(for index: Int, pageWidth: CGFloat) -> CGFloat {
@@ -1160,51 +1329,6 @@ private struct BottomSheetStyleOnboarding: View {
             : Color(.systemBackground)
     }
 
-    private var mediaDividerColor: Color {
-        colorScheme == .dark
-            ? .white
-            : Color(red: 51 / 255, green: 51 / 255, blue: 51 / 255)
-    }
-
-    private func mediaDividerVisibility(pageWidth: CGFloat) -> Double {
-        let visibility = items.indices.reduce(0.0) { result, index in
-            guard items[index].media.usesPhoneFrame else {
-                return result
-            }
-
-            return result + pageVisibility(for: index, pageWidth: pageWidth)
-        }
-
-        let baseVisibility = min(visibility, 1)
-        guard pageWidth > 0,
-              items.indices.contains(currentIndex),
-              items[currentIndex].media.usesPhoneFrame,
-              dragTranslation < 0 else {
-            return baseVisibility
-        }
-
-        let nextIndex = currentIndex + 1
-        guard items.indices.contains(nextIndex),
-              !items[nextIndex].media.usesPhoneFrame else {
-            return baseVisibility
-        }
-
-        let transitionProgress = min(max(-dragTranslation / pageWidth, 0), 1)
-        let acceleratedVisibility = max(0, 1 - transitionProgress / 0.30)
-        return min(baseVisibility, acceleratedVisibility)
-    }
-
-    private var mediaDividerAnimation: Animation {
-        guard items.indices.contains(currentIndex),
-              !items[currentIndex].media.usesPhoneFrame else {
-            return pageAnimation
-        }
-
-        return reduceMotion
-            ? .linear(duration: 0.08)
-            : .easeOut(duration: 0.13)
-    }
-
     private var primaryTextColor: Color {
         colorScheme == .dark
             ? .white
@@ -1240,15 +1364,6 @@ private struct BottomSheetStyleOnboarding: View {
 
             case phone(imageName: String, viewport: PhoneViewport)
             case illustration
-
-            var usesPhoneFrame: Bool {
-                switch self {
-                case .phone:
-                    true
-                case .illustration:
-                    false
-                }
-            }
         }
 
         let id: Int
@@ -1256,6 +1371,7 @@ private struct BottomSheetStyleOnboarding: View {
         let subtitle: String
         let media: Media
         let buttonTitle: String
+        var secondaryButtonTitle: String? = nil
     }
 }
 
@@ -1268,8 +1384,8 @@ private struct InterfaceOnboardingView: View {
             items: [
                 .init(
                     id: 0,
-                    title: "Когда ж ты блять поймешь",
-                    subtitle: "Здесь мы пишем что-то необходимое.\nПостарайтесь уложиться в 2–3 строки\nМаксимум в 4",
+                    title: "Всё необходимое рядом",
+                    subtitle: "Следите за обновлениями,\nбыстро находите нужные функции\nи управляйте ими в одном месте",
                     media: .video(
                         poster: UIImage(named: "OnboardingScreen1"),
                         resourceName: "OnboardingInterface1Light",
@@ -1279,32 +1395,32 @@ private struct InterfaceOnboardingView: View {
                 ),
                 .init(
                     id: 1,
-                    title: "Мне кажется, или нет, и снова все\nпошло по одному месте",
-                    subtitle: "Вот тебе макс стейт. Как видишь, все\nтексты у нас начинаются на одной и той\nже высоте. Что этот, что предыдущий, что\nследующий",
+                    title: "Новый интерфейс стал\nпроще и удобнее",
+                    subtitle: "Основные разделы всегда под рукой.\nПереходите между задачами быстрее,\nнастраивайте экран под себя\nи ничего не упускайте",
                     media: .image(poster: UIImage(named: "OnboardingScreen2")),
                     buttonTitle: "Далее"
                 ),
                 .init(
                     id: 2,
-                    title: "Наблюдай",
-                    subtitle: "Разве это похоже на то, что было сделано\nв прототипе?",
+                    title: "Больше возможностей",
+                    subtitle: "Открывайте новые функции\nи находите нужное быстрее",
                     media: .image(poster: UIImage(named: "OnboardingScreen4")),
                     phonePresentation: .largeBottom,
                     buttonTitle: "Далее"
                 ),
                 .init(
                     id: 3,
-                    title: "Теперь я надеюсь тебе стало\nпонятнее",
-                    subtitle: "Вот так должно быть. исключение\n— только слайд с двумя кнопками",
+                    title: "Настройте всё\nтак, как удобно вам",
+                    subtitle: "Выберите подходящий вариант\nили вернитесь к настройке позже",
                     media: .image(poster: UIImage(named: "OnboardingScreen3")),
                     phonePresentation: .largeTop,
                     buttonTitle: "Далее",
-                    secondaryButtonTitle: "Secondary action"
+                    secondaryButtonTitle: "Настроить позже"
                 ),
                 .init(
                     id: 4,
-                    title: "Теперь я надеюсь тебе стало\nпонятнее",
-                    subtitle: "Вот так должно быть. исключение\n— только слайд с двумя кнопками",
+                    title: "Всё готово\nк началу работы",
+                    subtitle: "Продолжайте знакомство\nи открывайте новые возможности",
                     media: .image(poster: UIImage(named: "OnboardingScreen3")),
                     phonePresentation: .largeTop,
                     buttonTitle: "Далее"
@@ -1545,7 +1661,6 @@ private struct IOS26StyleOnboarding: View {
                         Text(item.title)
                             .font(.system(size: 20, weight: .bold))
                             .tracking(0.38)
-                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(primaryTextColor)
@@ -1553,7 +1668,6 @@ private struct IOS26StyleOnboarding: View {
                         Text(item.subtitle)
                             .font(.system(size: 17, weight: .regular))
                             .tracking(-0.41)
-                            .lineLimit(4)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
                             .foregroundStyle(secondaryTextColor)
