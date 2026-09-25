@@ -220,10 +220,13 @@ private struct IllustrationStyleOnboarding: View {
 
     private func pictureAreaView(pageWidth: CGFloat, size: CGSize) -> some View {
         let slotTopPadding: CGFloat = 48
-        let slotWidth = max(0, size.width - 40)
+        let slotHorizontalPadding: CGFloat = 16
+        let slotVerticalPadding: CGFloat = 12
+        let slotWidth = max(0, size.width - slotHorizontalPadding * 2)
         let slotHeight = max(0, size.height - slotTopPadding)
-        let heroWidth = slotWidth
-        let heroHeight = heroWidth * (284 / 335)
+        let imageHeight = max(0, slotHeight - slotVerticalPadding * 2)
+        let fittedImageSide = min(slotWidth, imageHeight)
+        let glowSide = fittedImageSide * 0.75
 
         return ZStack(alignment: .bottom) {
             ZStack {
@@ -238,7 +241,11 @@ private struct IllustrationStyleOnboarding: View {
                     Image(item.imageName)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(width: 256, height: 256, alignment: item.imageAlignment)
+                        .frame(
+                            width: glowSide,
+                            height: glowSide,
+                            alignment: item.imageAlignment
+                        )
                         .clipped()
                         .scaleEffect(1.08)
                         .saturation(colorScheme == .dark ? 1.18 : 1.30)
@@ -247,13 +254,11 @@ private struct IllustrationStyleOnboarding: View {
 
                     Image(item.imageName)
                         .resizable()
-                        .aspectRatio(contentMode: .fill)
+                        .aspectRatio(contentMode: .fit)
                         .frame(
-                            width: heroWidth,
-                            height: heroHeight,
-                            alignment: item.imageAlignment
+                            width: slotWidth,
+                            height: imageHeight
                         )
-                        .clipped()
                         .modifier(
                             IllustrationArcCarouselModifier(
                                 relativePage: reduceMotion ? 0 : relativePage,
@@ -264,7 +269,7 @@ private struct IllustrationStyleOnboarding: View {
                         .opacity(reduceMotion ? (isActive ? 1 : 0) : 1)
                 }
             }
-            .frame(width: heroWidth, height: heroHeight)
+            .frame(width: slotWidth, height: imageHeight)
             .position(
                 x: size.width / 2,
                 y: slotTopPadding + slotHeight / 2
@@ -1752,14 +1757,12 @@ private struct IOS26StyleOnboarding: View {
         let currentLayout = currentItem.phonePresentation.layout(
             pictureAreaHeight: currentScreenLayout.pictureAreaHeight,
             screenWidth: pageWidth,
-            screenHeight: screenHeight,
-            hasSecondaryAction: currentItem.secondaryButtonTitle != nil
+            screenHeight: screenHeight
         )
         let targetLayout = targetItem.phonePresentation.layout(
             pictureAreaHeight: targetScreenLayout.pictureAreaHeight,
             screenWidth: pageWidth,
-            screenHeight: screenHeight,
-            hasSecondaryAction: targetItem.secondaryButtonTitle != nil
+            screenHeight: screenHeight
         )
 
         return PhoneLayout(
@@ -1917,7 +1920,9 @@ private struct IOS26StyleOnboarding: View {
         let bottomAreaHeight: CGFloat
     }
 
-    // Mirrors the three iOS phone variants from the Figma component.
+    // Mirrors the three iOS phone variants from the Figma component. The
+    // default state always uses Picture Area/Full-center-min as its source;
+    // device breakpoints are the only thing allowed to change its phone size.
     enum PhonePresentation: Equatable {
         private static let defaultBottomPadding: CGFloat = 16
         private static let largeTopPadding: CGFloat = 80
@@ -1952,21 +1957,13 @@ private struct IOS26StyleOnboarding: View {
         fileprivate func layout(
             pictureAreaHeight: CGFloat,
             screenWidth: CGFloat,
-            screenHeight: CGFloat,
-            hasSecondaryAction: Bool
+            screenHeight: CGFloat
         ) -> PhoneLayout {
             switch self {
             case .default:
-                let baseSize = hasSecondaryAction
-                    ? CGSize(width: 180, height: 370)
-                    : CGSize(width: 198, height: 406)
-                let scale = Self.defaultPhoneScale(
+                let size = Self.defaultPhoneSize(
                     screenWidth: screenWidth,
                     screenHeight: screenHeight
-                )
-                let size = CGSize(
-                    width: (baseSize.width * scale).rounded(),
-                    height: (baseSize.height * scale).rounded()
                 )
                 return PhoneLayout(
                     size: size,
@@ -2017,18 +2014,21 @@ private struct IOS26StyleOnboarding: View {
             )
         }
 
-        private static func defaultPhoneScale(
+        private static func defaultPhoneSize(
             screenWidth: CGFloat,
             screenHeight: CGFloat
-        ) -> CGFloat {
-            if screenWidth >= 431, screenHeight >= 933 {
-                1.20
-            } else if screenWidth >= 403, screenHeight >= 875 {
-                1.10
-            } else if screenWidth >= 376, screenHeight >= 813 {
-                1.05
+        ) -> CGSize {
+            // Discrete integer sizes keep the Figma frame crisp and avoid
+            // fractional geometry during swipe interpolation.
+            if screenWidth >= 430, screenHeight >= 932 {
+                CGSize(width: 238, height: 487)
+            } else if screenWidth >= 402, screenHeight >= 874 {
+                CGSize(width: 208, height: 426)
+            } else if screenWidth >= 390, screenHeight >= 844 {
+                CGSize(width: 198, height: 406)
             } else {
-                1
+                // Exact Picture Area/Full-center-min geometry from Figma.
+                CGSize(width: 180, height: 370)
             }
         }
     }
