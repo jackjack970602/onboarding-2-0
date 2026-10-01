@@ -127,7 +127,7 @@ private struct IllustrationOnboardingView: View {
                     title: "Включайте Долями",
                     subtitle: "Платите за покупки частями",
                     imageName: "OnboardingIllustrationInstallments",
-                    buttonTitle: "Включить",
+                    buttonTitle: "Далее",
                     textLayout: .minimum
                 ),
                 .init(
@@ -136,7 +136,7 @@ private struct IllustrationOnboardingView: View {
                     subtitle: "Разделите оплату на части.\nПервый платёж спишется сразу,\nостальные — каждые две недели",
                     imageName: "OnboardingIllustrationShopping",
                     imageAlignment: .bottom,
-                    buttonTitle: "Понятно",
+                    buttonTitle: "Далее",
                     textLayout: .medium
                 ),
                 .init(
@@ -145,7 +145,7 @@ private struct IllustrationOnboardingView: View {
                     subtitle: "Здесь мы пишем что-то необходимое.\nПостарайтесь уложиться в 2–3 строки\nМаксимум в 4",
                     imageName: "OnboardingIllustrationShopping",
                     imageAlignment: .bottom,
-                    buttonTitle: "Далее",
+                    buttonTitle: "Понятно",
                     secondaryButtonTitle: "Secondary action",
                     textLayout: .twoButtons
                 )
@@ -219,14 +219,14 @@ private struct IllustrationStyleOnboarding: View {
     }
 
     private func pictureAreaView(pageWidth: CGFloat, size: CGSize) -> some View {
-        let slotTopPadding: CGFloat = 48
-        let slotHorizontalPadding: CGFloat = 16
-        let slotVerticalPadding: CGFloat = 12
+        let slotTopPadding: CGFloat = 80
+        let slotHorizontalPadding: CGFloat = 24
+        let slotBottomPadding: CGFloat = 40
         let slotWidth = max(0, size.width - slotHorizontalPadding * 2)
-        let slotHeight = max(0, size.height - slotTopPadding)
-        let imageHeight = max(0, slotHeight - slotVerticalPadding * 2)
-        let fittedImageSide = min(slotWidth, imageHeight)
-        let glowSide = fittedImageSide * 0.75
+        let slotHeight = max(
+            0,
+            size.height - slotTopPadding - slotBottomPadding
+        )
 
         return ZStack(alignment: .bottom) {
             ZStack {
@@ -236,28 +236,13 @@ private struct IllustrationStyleOnboarding: View {
                     let relativePage = reduceMotion
                         ? CGFloat(index - currentIndex)
                         : relativePage(for: index, pageWidth: pageWidth)
-                    let visibility = pageVisibility(for: index, pageWidth: pageWidth)
-
-                    Image(item.imageName)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(
-                            width: glowSide,
-                            height: glowSide,
-                            alignment: item.imageAlignment
-                        )
-                        .clipped()
-                        .scaleEffect(1.08)
-                        .saturation(colorScheme == .dark ? 1.18 : 1.30)
-                        .blur(radius: 42)
-                        .opacity(visibility * (colorScheme == .dark ? 0.20 : 0.14))
 
                     Image(item.imageName)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(
                             width: slotWidth,
-                            height: imageHeight
+                            height: slotHeight
                         )
                         .modifier(
                             IllustrationArcCarouselModifier(
@@ -269,7 +254,7 @@ private struct IllustrationStyleOnboarding: View {
                         .opacity(reduceMotion ? (isActive ? 1 : 0) : 1)
                 }
             }
-            .frame(width: slotWidth, height: imageHeight)
+            .frame(width: slotWidth, height: slotHeight)
             .position(
                 x: size.width / 2,
                 y: slotTopPadding + slotHeight / 2
@@ -347,7 +332,7 @@ private struct IllustrationStyleOnboarding: View {
                             .tracking(-0.41)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(secondaryTextColor)
+                            .foregroundStyle(primaryTextColor)
                     }
                     .frame(
                         width: geometry.size.width,
@@ -394,9 +379,10 @@ private struct IllustrationStyleOnboarding: View {
         Button {
             transition(to: currentIndex == items.count - 1 ? 0 : currentIndex + 1)
         } label: {
-            Text(items[currentIndex].buttonTitle)
-                .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(Color("TUITextPrimaryOnAccent1"))
+            OnboardingPrimaryButtonTitle(
+                title: items[currentIndex].buttonTitle,
+                color: Color("TUITextPrimaryOnAccent1")
+            )
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .contentShape(Rectangle())
@@ -428,7 +414,7 @@ private struct IllustrationStyleOnboarding: View {
 
             transition(to: currentIndex - 1)
         } label: {
-            Image(systemName: "chevron.left")
+            Image(systemName: "xmark")
                 .font(.title3)
                 .frame(width: 20, height: 30)
         }
@@ -601,6 +587,64 @@ private struct IllustrationArcCarouselModifier: AnimatableModifier {
                 x: relativePage * pageWidth,
                 y: arcHeight * distance * distance
             )
+    }
+}
+
+private struct OnboardingPrimaryButtonTitle: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let title: String
+    let color: Color
+
+    @State private var displayedTitle: String
+    @State private var titleOpacity = 1.0
+
+    init(title: String, color: Color) {
+        self.title = title
+        self.color = color
+        _displayedTitle = State(initialValue: title)
+    }
+
+    var body: some View {
+        Text(displayedTitle)
+            .font(.system(size: 17, weight: .regular))
+            .foregroundStyle(color)
+            .opacity(titleOpacity)
+            .accessibilityLabel(title)
+            .task(id: title) {
+                await transitionToCurrentTitle()
+            }
+    }
+
+    @MainActor
+    private func transitionToCurrentTitle() async {
+        guard displayedTitle != title else {
+            titleOpacity = 1
+            return
+        }
+
+        guard !reduceMotion else {
+            displayedTitle = title
+            titleOpacity = 1
+            return
+        }
+
+        withAnimation(.easeOut(duration: 0.18)) {
+            titleOpacity = 0
+        }
+
+        do {
+            try await Task.sleep(nanoseconds: 230_000_000)
+        } catch {
+            return
+        }
+
+        guard !Task.isCancelled else { return }
+        displayedTitle = title
+
+        withAnimation(.easeIn(duration: 0.22)) {
+            titleOpacity = 1
+        }
     }
 }
 
@@ -823,7 +867,7 @@ private struct BottomSheetOnboardingView: View {
                 imageName: "OnboardingScreen2",
                 viewport: .top
             ),
-            buttonTitle: "Далее",
+            buttonTitle: "Понятно",
             secondaryButtonTitle: "Secondary action"
         )
     ]
@@ -880,8 +924,6 @@ private struct BottomSheetStyleOnboarding: View {
                 mediaCarousel(pageWidth: pageWidth)
                     .frame(height: mediaHeight)
                     .clipped()
-                    .contentShape(Rectangle())
-                    .simultaneousGesture(pageDragGesture(pageWidth: pageWidth))
 
                 copyView(pageWidth: pageWidth)
                     .frame(
@@ -910,6 +952,8 @@ private struct BottomSheetStyleOnboarding: View {
             .padding(.horizontal, sheetHorizontalPadding)
             .frame(height: sheetHeight, alignment: .top)
             .frame(maxHeight: .infinity, alignment: .top)
+            .contentShape(Rectangle())
+            .simultaneousGesture(pageDragGesture(pageWidth: pageWidth))
             .ignoresSafeArea(.container, edges: .bottom)
             .animation(pageAnimation, value: hasSecondaryAction)
         }
@@ -1163,7 +1207,7 @@ private struct BottomSheetStyleOnboarding: View {
                         .tracking(-0.41)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
-                        .foregroundStyle(secondaryTextColor)
+                        .foregroundStyle(primaryTextColor)
                 }
                 .frame(maxWidth: .infinity)
                 .compositingGroup()
@@ -1225,11 +1269,10 @@ private struct BottomSheetStyleOnboarding: View {
                 dragTranslation = 0
             }
         } label: {
-            Text(items[currentIndex].buttonTitle)
-                .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(
-                    Color(red: 51 / 255, green: 51 / 255, blue: 51 / 255)
-                )
+            OnboardingPrimaryButtonTitle(
+                title: items[currentIndex].buttonTitle,
+                color: Color(red: 51 / 255, green: 51 / 255, blue: 51 / 255)
+            )
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .contentShape(Rectangle())
@@ -1423,7 +1466,7 @@ private struct InterfaceOnboardingView: View {
                     subtitle: "Продолжайте знакомство\nи открывайте новые возможности",
                     media: .image(poster: UIImage(named: "OnboardingScreen3")),
                     phonePresentation: .largeTop,
-                    buttonTitle: "Далее"
+                    buttonTitle: "Понятно"
                 )
             ],
             onBackFromFirstPage: { dismiss() }
@@ -1670,7 +1713,7 @@ private struct IOS26StyleOnboarding: View {
                             .tracking(-0.41)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(secondaryTextColor)
+                            .foregroundStyle(primaryTextColor)
                     }
                     .frame(width: size.width)
                     .compositingGroup()
@@ -1712,9 +1755,10 @@ private struct IOS26StyleOnboarding: View {
         Button {
             transition(to: currentIndex == items.count - 1 ? 0 : currentIndex + 1)
         } label: {
-            Text(items[currentIndex].buttonTitle)
-                .font(.system(size: 17, weight: .regular))
-                .foregroundStyle(Color("TUITextPrimaryOnAccent1"))
+            OnboardingPrimaryButtonTitle(
+                title: items[currentIndex].buttonTitle,
+                color: Color("TUITextPrimaryOnAccent1")
+            )
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
                 .contentShape(Rectangle())
