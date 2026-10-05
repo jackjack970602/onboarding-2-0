@@ -2086,7 +2086,8 @@ private struct IOS26StyleOnboarding: View {
         private static let largeTopPadding: CGFloat = 80
         private static let largeTopSlotPadding: CGFloat = 32
         private static let largeBottomPadding: CGFloat = 48
-        private static let largeBaseSize = CGSize(width: 264, height: 550)
+        private static let mediumBaseSize = CGSize(width: 172, height: 356)
+        private static let largePhoneScale: CGFloat = 1.5
 
         case `default`
         case largeTop
@@ -2154,21 +2155,14 @@ private struct IOS26StyleOnboarding: View {
             screenWidth: CGFloat,
             screenHeight: CGFloat
         ) -> CGSize {
-            let scale: CGFloat
-
-            if screenWidth >= 431, screenHeight >= 933 {
-                scale = 1.15
-            } else if screenWidth >= 403, screenHeight >= 875 {
-                scale = 1.10
-            } else if screenWidth >= 376, screenHeight >= 813 {
-                scale = 1.05
-            } else {
-                scale = 1
-            }
+            let mediumSize = defaultPhoneSize(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight
+            )
 
             return CGSize(
-                width: (largeBaseSize.width * scale).rounded(),
-                height: (largeBaseSize.height * scale).rounded()
+                width: (mediumSize.width * largePhoneScale).rounded(),
+                height: (mediumSize.height * largePhoneScale).rounded()
             )
         }
 
@@ -2176,18 +2170,22 @@ private struct IOS26StyleOnboarding: View {
             screenWidth: CGFloat,
             screenHeight: CGFloat
         ) -> CGSize {
-            // Discrete integer sizes keep the Figma frame crisp and avoid
-            // fractional geometry during swipe interpolation.
-            if screenWidth >= 430, screenHeight >= 932 {
-                CGSize(width: 238, height: 487)
-            } else if screenWidth >= 402, screenHeight >= 874 {
-                CGSize(width: 208, height: 426)
+            let scale: CGFloat
+
+            if screenWidth >= 402, screenHeight >= 874 {
+                scale = 1.20
             } else if screenWidth >= 390, screenHeight >= 844 {
-                CGSize(width: 198, height: 406)
+                scale = 1.10
             } else {
-                // Exact Picture Area/Full-center-min geometry from Figma.
-                CGSize(width: 180, height: 370)
+                scale = 1
             }
+
+            // One shared 10% breakpoint grid keeps both M and L predictable.
+            // Integer sizes keep the Figma frame crisp during interpolation.
+            return CGSize(
+                width: (mediumBaseSize.width * scale).rounded(),
+                height: (mediumBaseSize.height * scale).rounded()
+            )
         }
     }
 
