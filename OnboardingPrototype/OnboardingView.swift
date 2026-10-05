@@ -714,21 +714,40 @@ private struct OnboardingDeviceFrame<Content: View>: View {
 private struct FigmaPhoneMockupFrame<Content: View>: View {
     let size: CGSize
     let hidesBezels: Bool
+    let slotSize: CGSize?
+    let outerCornerRadius: CGFloat?
+    let slotCornerRadius: CGFloat?
     private let content: Content
 
     init(
         size: CGSize,
         hidesBezels: Bool = false,
+        slotSize: CGSize? = nil,
+        outerCornerRadius: CGFloat? = nil,
+        slotCornerRadius: CGFloat? = nil,
         @ViewBuilder content: (CGSize) -> Content
     ) {
         self.size = size
         self.hidesBezels = hidesBezels
-        let metrics = Metrics(size: size)
+        self.slotSize = slotSize
+        self.outerCornerRadius = outerCornerRadius
+        self.slotCornerRadius = slotCornerRadius
+        let metrics = Metrics(
+            size: size,
+            slotSize: slotSize,
+            outerCornerRadius: outerCornerRadius,
+            slotCornerRadius: slotCornerRadius
+        )
         self.content = content(hidesBezels ? size : metrics.slotFrame.size)
     }
 
     var body: some View {
-        let metrics = Metrics(size: size)
+        let metrics = Metrics(
+            size: size,
+            slotSize: slotSize,
+            outerCornerRadius: outerCornerRadius,
+            slotCornerRadius: slotCornerRadius
+        )
 
         ZStack(alignment: .topLeading) {
             Color.clear
@@ -806,7 +825,12 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
         let slotCornerRadius: CGFloat
         let outerBorderWidth: CGFloat
 
-        init(size: CGSize) {
+        init(
+            size: CGSize,
+            slotSize: CGSize? = nil,
+            outerCornerRadius: CGFloat? = nil,
+            slotCornerRadius: CGFloat? = nil
+        ) {
             let progress = min(max((size.width - 198) / (260 - 198), 0), 1)
 
             outerFrame = CGRect(
@@ -815,14 +839,25 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
                 width: Self.interpolate(194 / 198, 254 / 260, progress: progress) * size.width,
                 height: Self.interpolate(402 / 406, 536 / 542, progress: progress) * size.height
             )
-            slotFrame = CGRect(
-                x: Self.interpolate(10 / 198, 12.52587890625 / 260, progress: progress) * size.width,
-                y: Self.interpolate(10 / 406, 12.00390625 / 542, progress: progress) * size.height,
-                width: Self.interpolate(178 / 198, 234.94845581054688 / 260, progress: progress) * size.width,
-                height: Self.interpolate(386 / 406, 517.3333740234375 / 542, progress: progress) * size.height
-            )
-            outerCornerRadius = Self.interpolate(32 / 198, 46 / 260, progress: progress) * size.width
-            slotCornerRadius = Self.interpolate(24 / 198, 36 / 260, progress: progress) * size.width
+            if let slotSize {
+                slotFrame = CGRect(
+                    x: (size.width - slotSize.width) / 2,
+                    y: (size.height - slotSize.height) / 2,
+                    width: slotSize.width,
+                    height: slotSize.height
+                )
+            } else {
+                slotFrame = CGRect(
+                    x: Self.interpolate(10 / 198, 12.52587890625 / 260, progress: progress) * size.width,
+                    y: Self.interpolate(10 / 406, 12.00390625 / 542, progress: progress) * size.height,
+                    width: Self.interpolate(178 / 198, 234.94845581054688 / 260, progress: progress) * size.width,
+                    height: Self.interpolate(386 / 406, 517.3333740234375 / 542, progress: progress) * size.height
+                )
+            }
+            self.outerCornerRadius = outerCornerRadius
+                ?? Self.interpolate(32 / 198, 46 / 260, progress: progress) * size.width
+            self.slotCornerRadius = slotCornerRadius
+                ?? Self.interpolate(24 / 198, 36 / 260, progress: progress) * size.width
             outerBorderWidth = Self.interpolate(2 / 198, 3 / 260, progress: progress) * size.width
         }
 
@@ -1476,14 +1511,17 @@ private struct InterfaceOnboardingView: View {
 }
 
 private struct IOS26StyleOnboarding: View {
-    // The updated Figma component is authored on a 375 x 812 reference screen.
-    // A one-action bottom area may grow to 340 pt; after that, additional
-    // device height belongs to the picture area. The two-action state reserves
-    // the full 384 pt bottom area from the component.
-    private let referenceScreenHeight: CGFloat = 812
-    private let maximumOneButtonBottomAreaHeight: CGFloat = 340
-    private let twoButtonBottomAreaHeight: CGFloat = 384
-    private let twoButtonSpacing: CGFloat = 8
+    private static let maximumTitleLines = 2
+    private static let maximumSubtitleLines = 4
+    private static let copySpacing: CGFloat = 8
+    private static let twoButtonSpacing: CGFloat = 16
+    private static let maximumCopyHeight =
+        ceil(UIFont.systemFont(ofSize: 20, weight: .bold).lineHeight)
+            * CGFloat(maximumTitleLines)
+        + copySpacing
+        + ceil(UIFont.systemFont(ofSize: 17, weight: .regular).lineHeight)
+            * CGFloat(maximumSubtitleLines)
+    private static let fixedBottomReferenceHeight: CGFloat = 380
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -1501,13 +1539,13 @@ private struct IOS26StyleOnboarding: View {
         GeometryReader { geometry in
             let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
             let topSafeArea = max(geometry.safeAreaInsets.top, 44)
-            let screenLayout = interactiveScreenLayout(
-                pageWidth: geometry.size.width,
-                screenHeight: geometry.size.height,
+            let bottomAreaHeight = fixedBottomHeight(
                 bottomSafeArea: bottomSafeArea
             )
-            let pictureAreaHeight = screenLayout.pictureAreaHeight
-            let bottomAreaHeight = screenLayout.bottomAreaHeight
+            let pictureAreaHeight = max(
+                280,
+                geometry.size.height - bottomAreaHeight
+            )
 
             ZStack(alignment: .top) {
                 backgroundColor
@@ -1516,7 +1554,6 @@ private struct IOS26StyleOnboarding: View {
                 pictureAreaView(
                     pageWidth: geometry.size.width,
                     screenHeight: geometry.size.height,
-                    bottomSafeArea: bottomSafeArea,
                     size: CGSize(
                         width: geometry.size.width,
                         height: pictureAreaHeight
@@ -1534,11 +1571,6 @@ private struct IOS26StyleOnboarding: View {
                 .background(backgroundColor)
                 .frame(maxHeight: .infinity, alignment: .bottom)
 
-                textContentView(pageWidth: geometry.size.width)
-                    .frame(height: 132)
-                    .padding(.horizontal, 16)
-                    .offset(y: pictureAreaHeight + 32)
-
                 backButton(topInset: topSafeArea)
             }
             .contentShape(Rectangle())
@@ -1552,47 +1584,56 @@ private struct IOS26StyleOnboarding: View {
         pageWidth: CGFloat,
         bottomSafeArea: CGFloat
     ) -> some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-
-            indicatorView(pageWidth: pageWidth)
-                .padding(.bottom, 12)
+        ZStack(alignment: .top) {
+            textContentView(pageWidth: pageWidth)
+                .frame(height: Self.maximumCopyHeight, alignment: .top)
+                .padding(.top, 32)
+                .padding(.horizontal, 16)
 
             VStack(spacing: 0) {
-                continueButton
+                Spacer(minLength: 0)
 
-                if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
-                    secondaryButton(title: secondaryButtonTitle)
-                        .padding(.top, twoButtonSpacing)
+                indicatorView(pageWidth: pageWidth)
+                    .padding(.bottom, 12)
+
+                VStack(spacing: 0) {
+                    continueButton
+
+                    if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
+                        secondaryButton(title: secondaryButtonTitle)
+                            .padding(.top, Self.twoButtonSpacing)
+                    }
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(
-                .bottom,
-                items[currentIndex].secondaryButtonTitle == nil ? 24 : 16
-            )
+                .padding(.horizontal, 16)
+                .padding(
+                    .bottom,
+                    items[currentIndex].secondaryButtonTitle == nil ? 24 : 20
+                )
 
-            Color.clear
-                .frame(height: bottomSafeArea)
+                Color.clear
+                    .frame(height: bottomSafeArea)
+            }
         }
     }
 
     private func pictureAreaView(
         pageWidth: CGFloat,
         screenHeight: CGFloat,
-        bottomSafeArea: CGFloat,
         size: CGSize
     ) -> some View {
         let phoneLayout = interactivePhoneLayout(
             pageWidth: pageWidth,
-            screenHeight: screenHeight,
-            bottomSafeArea: bottomSafeArea
+            pictureAreaHeight: size.height,
+            screenHeight: screenHeight
         )
 
         return ZStack(alignment: .top) {
             FigmaPhoneMockupFrame(
                 size: phoneLayout.size,
-                hidesBezels: hideBezels
+                hidesBezels: hideBezels,
+                slotSize: phoneLayout.slotSize,
+                outerCornerRadius: phoneLayout.outerCornerRadius,
+                slotCornerRadius: phoneLayout.slotCornerRadius
             ) { viewportSize in
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
@@ -1775,7 +1816,7 @@ private struct IOS26StyleOnboarding: View {
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255))
                 .frame(maxWidth: .infinity)
-                .frame(height: 56)
+                .frame(height: 48)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1836,89 +1877,22 @@ private struct IOS26StyleOnboarding: View {
         return min(abs(dragTranslation) / pageWidth, 1)
     }
 
-    private func interactiveScreenLayout(
-        pageWidth: CGFloat,
-        screenHeight: CGFloat,
-        bottomSafeArea: CGFloat
-    ) -> ScreenLayout {
-        let targetIndex = transitionTargetIndex()
-        let progress = transitionProgress(pageWidth: pageWidth)
-        let currentLayout = screenLayout(
-            for: items[currentIndex],
-            screenHeight: screenHeight,
-            bottomSafeArea: bottomSafeArea
-        )
-        let targetLayout = screenLayout(
-            for: items[targetIndex],
-            screenHeight: screenHeight,
-            bottomSafeArea: bottomSafeArea
-        )
-
-        return ScreenLayout(
-            pictureAreaHeight: currentLayout.pictureAreaHeight
-                + (targetLayout.pictureAreaHeight - currentLayout.pictureAreaHeight) * progress,
-            bottomAreaHeight: currentLayout.bottomAreaHeight
-                + (targetLayout.bottomAreaHeight - currentLayout.bottomAreaHeight) * progress
-        )
-    }
-
-    private func screenLayout(
-        for item: Item,
-        screenHeight: CGFloat,
-        bottomSafeArea: CGFloat
-    ) -> ScreenLayout {
-        let safeAreaDelta = max(0, bottomSafeArea - 34)
-        let minimumPictureAreaHeight = item.phonePresentation.minimumPictureAreaHeight
-        let bottomAreaHeight: CGFloat
-
-        if item.secondaryButtonTitle != nil {
-            bottomAreaHeight = twoButtonBottomAreaHeight + safeAreaDelta
-        } else {
-            let referenceBottomAreaHeight = referenceScreenHeight
-                - item.phonePresentation.referenceOneButtonPictureAreaHeight
-            let availableGrowth = max(0, screenHeight - referenceScreenHeight)
-
-            bottomAreaHeight = min(
-                maximumOneButtonBottomAreaHeight,
-                referenceBottomAreaHeight + availableGrowth
-            ) + safeAreaDelta
-        }
-
-        return ScreenLayout(
-            pictureAreaHeight: max(
-                minimumPictureAreaHeight,
-                screenHeight - bottomAreaHeight
-            ),
-            bottomAreaHeight: bottomAreaHeight
-        )
-    }
-
     private func interactivePhoneLayout(
         pageWidth: CGFloat,
-        screenHeight: CGFloat,
-        bottomSafeArea: CGFloat
+        pictureAreaHeight: CGFloat,
+        screenHeight: CGFloat
     ) -> PhoneLayout {
         let targetIndex = transitionTargetIndex()
         let progress = transitionProgress(pageWidth: pageWidth)
         let currentItem = items[currentIndex]
         let targetItem = items[targetIndex]
-        let currentScreenLayout = screenLayout(
-            for: currentItem,
-            screenHeight: screenHeight,
-            bottomSafeArea: bottomSafeArea
-        )
-        let targetScreenLayout = screenLayout(
-            for: targetItem,
-            screenHeight: screenHeight,
-            bottomSafeArea: bottomSafeArea
-        )
         let currentLayout = currentItem.phonePresentation.layout(
-            pictureAreaHeight: currentScreenLayout.pictureAreaHeight,
+            pictureAreaHeight: pictureAreaHeight,
             screenWidth: pageWidth,
             screenHeight: screenHeight
         )
         let targetLayout = targetItem.phonePresentation.layout(
-            pictureAreaHeight: targetScreenLayout.pictureAreaHeight,
+            pictureAreaHeight: pictureAreaHeight,
             screenWidth: pageWidth,
             screenHeight: screenHeight
         )
@@ -1930,7 +1904,17 @@ private struct IOS26StyleOnboarding: View {
                 height: currentLayout.size.height
                     + (targetLayout.size.height - currentLayout.size.height) * progress
             ),
-            top: currentLayout.top + (targetLayout.top - currentLayout.top) * progress
+            slotSize: CGSize(
+                width: currentLayout.slotSize.width
+                    + (targetLayout.slotSize.width - currentLayout.slotSize.width) * progress,
+                height: currentLayout.slotSize.height
+                    + (targetLayout.slotSize.height - currentLayout.slotSize.height) * progress
+            ),
+            top: currentLayout.top + (targetLayout.top - currentLayout.top) * progress,
+            outerCornerRadius: currentLayout.outerCornerRadius
+                + (targetLayout.outerCornerRadius - currentLayout.outerCornerRadius) * progress,
+            slotCornerRadius: currentLayout.slotCornerRadius
+                + (targetLayout.slotCornerRadius - currentLayout.slotCornerRadius) * progress
         )
     }
 
@@ -2034,6 +2018,11 @@ private struct IOS26StyleOnboarding: View {
             }
     }
 
+    private func fixedBottomHeight(bottomSafeArea: CGFloat) -> CGFloat {
+        let safeAreaDelta = max(0, bottomSafeArea - 34)
+        return Self.fixedBottomReferenceHeight + safeAreaDelta
+    }
+
     private var backgroundColor: Color {
         colorScheme == .dark ? .black : .white
     }
@@ -2070,12 +2059,10 @@ private struct IOS26StyleOnboarding: View {
 
     fileprivate struct PhoneLayout {
         let size: CGSize
+        let slotSize: CGSize
         let top: CGFloat
-    }
-
-    private struct ScreenLayout {
-        let pictureAreaHeight: CGFloat
-        let bottomAreaHeight: CGFloat
+        let outerCornerRadius: CGFloat
+        let slotCornerRadius: CGFloat
     }
 
     // Mirrors the three iOS phone variants from the Figma component. The
@@ -2086,38 +2073,49 @@ private struct IOS26StyleOnboarding: View {
         private static let largeTopPadding: CGFloat = 80
         private static let largeTopSlotPadding: CGFloat = 32
         private static let largeBottomPadding: CGFloat = 48
-        private static let mediumBaseSize = CGSize(width: 172, height: 356)
+        private static let mediumBaseSize = CGSize(width: 174, height: 356)
+        private static let mediumBaseSlotSize = CGSize(width: 155, height: 336)
+        private static let largeBaseSlotSize = CGSize(width: 235, height: 508)
         private static let largePhoneScale: CGFloat = 1.5
+        private static let mediumOuterCornerRadius: CGFloat = 32
+        private static let mediumSlotCornerRadius: CGFloat = 24
+        private static let largeOuterCornerRadius: CGFloat = 46
+        private static let largeSlotCornerRadius: CGFloat = 36
 
         case `default`
         case largeTop
         case largeBottom
-
-        fileprivate var minimumPictureAreaHeight: CGFloat {
-            switch self {
-            case .default:
-                280
-            case .largeTop, .largeBottom:
-                360
-            }
-        }
-
-        fileprivate var referenceOneButtonPictureAreaHeight: CGFloat {
-            switch self {
-            case .default:
-                488
-            case .largeTop:
-                497
-            case .largeBottom:
-                496
-            }
-        }
 
         fileprivate func layout(
             pictureAreaHeight: CGFloat,
             screenWidth: CGFloat,
             screenHeight: CGFloat
         ) -> PhoneLayout {
+            let breakpointScale = Self.breakpointScale(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight
+            )
+            let outerCornerRadius: CGFloat
+            let slotCornerRadius: CGFloat
+            let slotSize: CGSize
+
+            switch self {
+            case .default:
+                outerCornerRadius = (Self.mediumOuterCornerRadius * breakpointScale).rounded()
+                slotCornerRadius = (Self.mediumSlotCornerRadius * breakpointScale).rounded()
+                slotSize = Self.scaledIntegerSize(
+                    Self.mediumBaseSlotSize,
+                    scale: breakpointScale
+                )
+            case .largeTop, .largeBottom:
+                outerCornerRadius = (Self.largeOuterCornerRadius * breakpointScale).rounded()
+                slotCornerRadius = (Self.largeSlotCornerRadius * breakpointScale).rounded()
+                slotSize = Self.scaledIntegerSize(
+                    Self.largeBaseSlotSize,
+                    scale: breakpointScale
+                )
+            }
+
             switch self {
             case .default:
                 let size = Self.defaultPhoneSize(
@@ -2126,9 +2124,12 @@ private struct IOS26StyleOnboarding: View {
                 )
                 return PhoneLayout(
                     size: size,
+                    slotSize: slotSize,
                     top: pictureAreaHeight
                         - Self.defaultBottomPadding
-                        - size.height
+                        - size.height,
+                    outerCornerRadius: outerCornerRadius,
+                    slotCornerRadius: slotCornerRadius
                 )
             case .largeTop:
                 return PhoneLayout(
@@ -2136,7 +2137,10 @@ private struct IOS26StyleOnboarding: View {
                         screenWidth: screenWidth,
                         screenHeight: screenHeight
                     ),
-                    top: Self.largeTopPadding + Self.largeTopSlotPadding
+                    slotSize: slotSize,
+                    top: Self.largeTopPadding + Self.largeTopSlotPadding,
+                    outerCornerRadius: outerCornerRadius,
+                    slotCornerRadius: slotCornerRadius
                 )
             case .largeBottom:
                 let size = Self.largePhoneSize(
@@ -2146,7 +2150,10 @@ private struct IOS26StyleOnboarding: View {
 
                 return PhoneLayout(
                     size: size,
-                    top: pictureAreaHeight - Self.largeBottomPadding - size.height
+                    slotSize: slotSize,
+                    top: pictureAreaHeight - Self.largeBottomPadding - size.height,
+                    outerCornerRadius: outerCornerRadius,
+                    slotCornerRadius: slotCornerRadius
                 )
             }
         }
@@ -2170,15 +2177,10 @@ private struct IOS26StyleOnboarding: View {
             screenWidth: CGFloat,
             screenHeight: CGFloat
         ) -> CGSize {
-            let scale: CGFloat
-
-            if screenWidth >= 402, screenHeight >= 874 {
-                scale = 1.20
-            } else if screenWidth >= 390, screenHeight >= 844 {
-                scale = 1.10
-            } else {
-                scale = 1
-            }
+            let scale = breakpointScale(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight
+            )
 
             // One shared 10% breakpoint grid keeps both M and L predictable.
             // Integer sizes keep the Figma frame crisp during interpolation.
@@ -2186,6 +2188,29 @@ private struct IOS26StyleOnboarding: View {
                 width: (mediumBaseSize.width * scale).rounded(),
                 height: (mediumBaseSize.height * scale).rounded()
             )
+        }
+
+        private static func scaledIntegerSize(
+            _ size: CGSize,
+            scale: CGFloat
+        ) -> CGSize {
+            CGSize(
+                width: (size.width * scale).rounded(),
+                height: (size.height * scale).rounded()
+            )
+        }
+
+        private static func breakpointScale(
+            screenWidth: CGFloat,
+            screenHeight: CGFloat
+        ) -> CGFloat {
+            if screenWidth >= 402, screenHeight >= 874 {
+                1.20
+            } else if screenWidth >= 390, screenHeight >= 844 {
+                1.10
+            } else {
+                1
+            }
         }
     }
 
