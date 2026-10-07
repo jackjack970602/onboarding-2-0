@@ -7,12 +7,23 @@ struct OnboardingView: View {
         List {
             Section("Форматы") {
                 NavigationLink {
-                    InterfaceOnboardingView()
+                    InterfaceOnboardingView(motionMode: .standard)
                 } label: {
                     OnboardingFormatRow(
                         title: "Интерфейс",
                         subtitle: "Скриншоты и видео внутри фрейма телефона",
                         systemImage: "iphone.gen3"
+                    )
+                }
+
+                NavigationLink {
+                    InterfaceOnboardingView(motionMode: .reducedMotion)
+                } label: {
+                    OnboardingFormatRow(
+                        title: "Интерфейс · Reduce Motion",
+                        subtitle: "Бесшовный морфинг и горизонтальный свайп без blur",
+                        systemImage: "iphone.gen3",
+                        badge: "Эксперимент"
                     )
                 }
 
@@ -1453,12 +1464,20 @@ private struct BottomSheetStyleOnboarding: View {
     }
 }
 
+private enum InterfaceMotionMode {
+    case standard
+    case reducedMotion
+}
+
 private struct InterfaceOnboardingView: View {
     @Environment(\.dismiss) private var dismiss
+
+    let motionMode: InterfaceMotionMode
 
     var body: some View {
         IOS26StyleOnboarding(
             hideBezels: false,
+            motionMode: motionMode,
             items: [
                 .init(
                     id: 0,
@@ -1523,17 +1542,21 @@ private struct IOS26StyleOnboarding: View {
             * CGFloat(maximumSubtitleLines)
     private static let fixedBottomReferenceHeight: CGFloat = 380
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.scenePhase) private var scenePhase
 
     var hideBezels = false
+    var motionMode: InterfaceMotionMode = .standard
     var items: [Item]
     var onBackFromFirstPage: () -> Void
 
     @State private var currentIndex = 0
     @State private var dragTranslation: CGFloat = 0
     @State private var swipeHapticTrigger = 0
+    @State private var isDragGestureActive = false
+    @State private var isMediaTransitionActive = false
+    @State private var mediaTransitionToken = UUID()
 
     var body: some View {
         GeometryReader { geometry in
@@ -1640,7 +1663,8 @@ private struct IOS26StyleOnboarding: View {
 
                     mediaView(
                         for: item,
-                        isActive: currentIndex == index
+                        isActive: currentIndex == index,
+                        isTransitioning: isMediaTransitionActive
                     )
                     .frame(
                         width: viewportSize.width,
@@ -1705,7 +1729,8 @@ private struct IOS26StyleOnboarding: View {
     @ViewBuilder
     private func mediaView(
         for item: Item,
-        isActive: Bool
+        isActive: Bool,
+        isTransitioning: Bool
     ) -> some View {
         ZStack {
             if let poster = item.media.poster {
@@ -1721,7 +1746,10 @@ private struct IOS26StyleOnboarding: View {
                Bundle.main.url(forResource: resourceName, withExtension: "mp4") != nil {
                 OnboardingVideoView(
                     resourceName: resourceName,
-                    isPlaying: isActive && scenePhase == .active,
+                    isPlaying: isActive
+                        && !isTransitioning
+                        && scenePhase == .active,
+                    isFrozen: isTransitioning,
                     posterDuration: 1.5
                 )
             }
@@ -1757,12 +1785,14 @@ private struct IOS26StyleOnboarding: View {
                             .foregroundStyle(primaryTextColor)
                     }
                     .frame(width: size.width)
-                    .compositingGroup()
-                    .offset(
-                        x: reduceMotion ? 0 : relativePage * pageWidth
+                    .modifier(
+                        InterfaceTextCompositingModifier(
+                            isEnabled: !usesReducedContentMotion
+                        )
                     )
-                    .blur(radius: reduceMotion ? 0 : 30 * distance)
-                    .opacity(1 - distance)
+                    .offset(x: relativePage * pageWidth)
+                    .blur(radius: usesReducedContentMotion ? 0 : 30 * distance)
+                    .opacity(usesReducedContentMotion ? 1 : 1 - distance)
                 }
             }
         }
@@ -1823,6 +1853,30 @@ private struct IOS26StyleOnboarding: View {
     }
 
     private func backButton(topInset: CGFloat) -> some View {
+        Group {
+            if motionMode == .reducedMotion {
+                backButtonContent
+                    .buttonStyle(.plain)
+                    .background(
+                        Circle()
+                            .fill(legacyAppBarButtonBackground)
+                            .frame(width: 40, height: 40)
+                    )
+                    .frame(width: 48, height: 48)
+            } else {
+                backButtonContent
+                    .buttonStyle(.glass)
+                    .buttonBorderShape(.circle)
+            }
+        }
+        .foregroundStyle(primaryTextColor)
+        .accessibilityLabel("Назад")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(.leading, 16)
+        .padding(.top, topInset)
+    }
+
+    private var backButtonContent: some View {
         Button {
             guard currentIndex > 0 else {
                 onBackFromFirstPage()
@@ -1832,16 +1886,16 @@ private struct IOS26StyleOnboarding: View {
             transition(to: currentIndex - 1)
         } label: {
             Image(systemName: "chevron.left")
-                .font(.title3)
-                .frame(width: 20, height: 30)
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 48, height: 48)
+                .contentShape(Circle())
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .foregroundStyle(primaryTextColor)
-        .accessibilityLabel("Назад")
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.leading, 16)
-        .padding(.top, topInset)
+    }
+
+    private var legacyAppBarButtonBackground: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.08)
+            : Color(red: 247 / 255, green: 247 / 255, blue: 247 / 255)
     }
 
     private func relativePage(for index: Int, pageWidth: CGFloat) -> CGFloat {
@@ -1978,6 +2032,11 @@ private struct IOS26StyleOnboarding: View {
                     return
                 }
 
+                if !isDragGestureActive {
+                    isDragGestureActive = true
+                    beginMediaTransition()
+                }
+
                 let rawTranslation = value.translation.width
                 let isAtFirstPage = currentIndex == 0 && rawTranslation > 0
                 let isAtLastPage = currentIndex == items.count - 1 && rawTranslation < 0
@@ -1991,6 +2050,8 @@ private struct IOS26StyleOnboarding: View {
                 }
             }
             .onEnded { value in
+                let wasDraggingHorizontally = isDragGestureActive
+                isDragGestureActive = false
                 let isHorizontal = abs(value.translation.width) > abs(value.translation.height)
                 let projectedTranslation = value.predictedEndTranslation.width
                 let distanceThreshold = pageWidth * 0.18
@@ -2014,6 +2075,10 @@ private struct IOS26StyleOnboarding: View {
                 withAnimation(animation) {
                     currentIndex = targetIndex
                     dragTranslation = 0
+                }
+
+                if wasDraggingHorizontally {
+                    endMediaTransitionAfterAnimation()
                 }
             }
     }
@@ -2215,9 +2280,32 @@ private struct IOS26StyleOnboarding: View {
     }
 
     private var animation: Animation {
-        reduceMotion
+        systemReduceMotion
             ? .easeInOut(duration: 0.2)
             : .interpolatingSpring(duration: 0.65, bounce: 0, initialVelocity: 0)
+    }
+
+    private var usesReducedContentMotion: Bool {
+        systemReduceMotion || motionMode == .reducedMotion
+    }
+
+    private func beginMediaTransition() {
+        mediaTransitionToken = UUID()
+        isMediaTransitionActive = true
+    }
+
+    private func endMediaTransitionAfterAnimation() {
+        let token = UUID()
+        mediaTransitionToken = token
+        let delay = systemReduceMotion ? 0.2 : 0.65
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            guard mediaTransitionToken == token else {
+                return
+            }
+
+            isMediaTransitionActive = false
+        }
     }
 
     private func transition(to targetIndex: Int) {
@@ -2225,10 +2313,14 @@ private struct IOS26StyleOnboarding: View {
             return
         }
 
+        beginMediaTransition()
+
         withAnimation(animation) {
             currentIndex = targetIndex
             dragTranslation = 0
         }
+
+        endMediaTransitionAfterAnimation()
 
         swipeHapticTrigger += 1
     }
@@ -2461,6 +2553,7 @@ private enum OnboardingMedia {
 private struct OnboardingVideoView: UIViewRepresentable {
     let resourceName: String
     let isPlaying: Bool
+    var isFrozen = false
     let posterDuration: TimeInterval
 
     func makeCoordinator() -> Coordinator {
@@ -2473,6 +2566,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
             playerLayer: view.playerLayer,
             resourceName: resourceName,
             isPlaying: isPlaying,
+            isFrozen: isFrozen,
             posterDuration: posterDuration
         )
         return view
@@ -2483,6 +2577,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
             playerLayer: uiView.playerLayer,
             resourceName: resourceName,
             isPlaying: isPlaying,
+            isFrozen: isFrozen,
             posterDuration: posterDuration
         )
     }
@@ -2496,32 +2591,59 @@ private struct OnboardingVideoView: UIViewRepresentable {
         private var player: AVQueuePlayer?
         private var looper: AVPlayerLooper?
         private var loadedResourceName: String?
-        private var wasPlaying = false
+        private var playbackState = PlaybackState.stopped
         private var playbackStarted = false
         private var pendingPlayback: DispatchWorkItem?
         private var pendingReveal: DispatchWorkItem?
+
+        private enum PlaybackState: Equatable {
+            case playing
+            case frozen
+            case stopped
+        }
 
         func update(
             playerLayer: AVPlayerLayer,
             resourceName: String,
             isPlaying: Bool,
+            isFrozen: Bool,
             posterDuration: TimeInterval
         ) {
             if loadedResourceName != resourceName {
                 configure(playerLayer: playerLayer, resourceName: resourceName)
             }
 
-            guard let player, wasPlaying != isPlaying else {
+            guard let player else {
                 return
             }
 
-            wasPlaying = isPlaying
+            let newState: PlaybackState = if isPlaying {
+                .playing
+            } else if isFrozen {
+                .frozen
+            } else {
+                .stopped
+            }
+
+            guard playbackState != newState else {
+                return
+            }
+
+            playbackState = newState
             pendingPlayback?.cancel()
             pendingReveal?.cancel()
 
-            if isPlaying {
+            switch newState {
+            case .playing:
+                if playerLayer.opacity > 0 {
+                    playbackStarted = true
+                    player.play()
+                    revealVideoWhenReady(on: playerLayer)
+                    return
+                }
+
                 let playback = DispatchWorkItem { [weak self] in
-                    guard let self, self.wasPlaying else { return }
+                    guard let self, self.playbackState == .playing else { return }
                     self.playbackStarted = true
                     self.player?.play()
                     self.revealVideoWhenReady(on: playerLayer)
@@ -2531,7 +2653,12 @@ private struct OnboardingVideoView: UIViewRepresentable {
                     deadline: .now() + posterDuration,
                     execute: playback
                 )
-            } else {
+
+            case .frozen:
+                playbackStarted = false
+                player.pause()
+
+            case .stopped:
                 playbackStarted = false
                 setVideoVisible(false, on: playerLayer)
                 player.pause()
@@ -2552,7 +2679,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
             player = nil
             looper = nil
             loadedResourceName = nil
-            wasPlaying = false
+            playbackState = .stopped
         }
 
         private func configure(playerLayer: AVPlayerLayer, resourceName: String) {
@@ -2576,7 +2703,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
         }
 
         private func revealVideoWhenReady(on playerLayer: AVPlayerLayer) {
-            guard wasPlaying, playbackStarted else {
+            guard playbackState == .playing, playbackStarted else {
                 return
             }
 
@@ -2671,6 +2798,19 @@ private struct InterfacePrimaryButtonSurfaceModifier: ViewModifier {
             Color("TUIBackgroundAccent1"),
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
+    }
+}
+
+private struct InterfaceTextCompositingModifier: ViewModifier {
+    let isEnabled: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.compositingGroup()
+        } else {
+            content
+        }
     }
 }
 
