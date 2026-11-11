@@ -772,6 +772,7 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
     let slotSize: CGSize?
     let outerCornerRadius: CGFloat?
     let slotCornerRadius: CGFloat?
+    let slotBackground: Color
     private let content: Content
 
     init(
@@ -780,6 +781,7 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
         slotSize: CGSize? = nil,
         outerCornerRadius: CGFloat? = nil,
         slotCornerRadius: CGFloat? = nil,
+        slotBackground: Color = Color(.systemBackground),
         @ViewBuilder content: (CGSize) -> Content
     ) {
         self.size = size
@@ -787,6 +789,7 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
         self.slotSize = slotSize
         self.outerCornerRadius = outerCornerRadius
         self.slotCornerRadius = slotCornerRadius
+        self.slotBackground = slotBackground
         let metrics = Metrics(
             size: size,
             slotSize: slotSize,
@@ -851,7 +854,7 @@ private struct FigmaPhoneMockupFrame<Content: View>: View {
                         width: metrics.slotFrame.width,
                         height: metrics.slotFrame.height
                     )
-                    .background(Color(.systemBackground))
+                    .background(slotBackground)
                     .clipShape(
                         RoundedRectangle(
                             cornerRadius: metrics.slotCornerRadius,
@@ -2194,6 +2197,15 @@ private struct InterfaceGuideOnboardingView: View {
                 ),
                 .init(
                     id: 4,
+                    title: "Показывайте важное\nотдельно",
+                    subtitle: "Выделяйте нужный блок интерфейса,\nчтобы его было проще заметить",
+                    media: .assetImage(name: "InterfaceGuideDetachedBlock"),
+                    phonePresentation: .default,
+                    externalCardAssetName: "InterfaceGuideDetachedCard",
+                    buttonTitle: "Далее"
+                ),
+                .init(
+                    id: 5,
                     title: "Всё готово\nк началу работы",
                     subtitle: "Продолжайте знакомство\nи открывайте новые возможности",
                     media: .image(poster: UIImage(named: "OnboardingScreen3")),
@@ -2244,6 +2256,7 @@ private struct IOS26StyleOnboarding: View {
     @State private var isDragGestureActive = false
     @State private var isMediaTransitionActive = false
     @State private var mediaTransitionToken = UUID()
+    @State private var isExternalCardVisible = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -2311,7 +2324,10 @@ private struct IOS26StyleOnboarding: View {
         return ZStack(alignment: .top) {
             textContentView(pageWidth: pageWidth)
                 .frame(height: copyHeight, alignment: .top)
-                .padding(.top, isGuide ? 8 : 32)
+                .padding(
+                    .top,
+                    isGuide ? guideCopyTopPadding(for: items[currentIndex]) : 32
+                )
                 .padding(.horizontal, isGuide ? 20 : 16)
 
             VStack(spacing: 0) {
@@ -2361,7 +2377,9 @@ private struct IOS26StyleOnboarding: View {
                 hidesBezels: hideBezels,
                 slotSize: phoneLayout.slotSize,
                 outerCornerRadius: phoneLayout.outerCornerRadius,
-                slotCornerRadius: phoneLayout.slotCornerRadius
+                slotCornerRadius: phoneLayout.slotCornerRadius,
+                slotBackground: layoutVariant.usesFigmaGuide
+                    ? .black : Color(.systemBackground)
             ) { viewportSize in
                 ZStack {
                     if layoutVariant.usesFigmaGuide {
@@ -2370,25 +2388,11 @@ private struct IOS26StyleOnboarding: View {
 
                     ForEach(items.indices, id: \.self) { index in
                         let item = items[index]
-                        let restingPictureAreaHeight = max(
-                            navigationHeight + 200,
-                            screenHeight - bottomReferenceHeight(
-                                for: item,
-                                pageWidth: pageWidth
-                            )
-                        )
-                        let pageCornerRadius = item.phonePresentation.figmaGuideLayout(
-                            pictureAreaHeight: restingPictureAreaHeight,
-                            screenWidth: pageWidth,
-                            screenHeight: screenHeight,
-                            navigationHeight: navigationHeight
-                        ).slotCornerRadius
 
                         mediaPageView(
                             for: item,
                             index: index,
-                            viewportSize: viewportSize,
-                            slotCornerRadius: pageCornerRadius
+                            viewportSize: viewportSize
                         )
                         .offset(
                             x: CGFloat(index - currentIndex)
@@ -2404,6 +2408,14 @@ private struct IOS26StyleOnboarding: View {
                 x: size.width / 2,
                 y: phoneLayout.top + phoneLayout.size.height / 2
             )
+
+            if let cardAssetName = items[currentIndex].externalCardAssetName {
+                externalCardView(
+                    assetName: cardAssetName,
+                    phoneLayout: phoneLayout,
+                    pageWidth: pageWidth
+                )
+            }
 
             ZStack(alignment: .top) {
                 // Navbar fade hides the top arch of the large-bottom phone.
@@ -2449,12 +2461,43 @@ private struct IOS26StyleOnboarding: View {
         .accessibilityHidden(true)
     }
 
+    private func externalCardView(
+        assetName: String,
+        phoneLayout: PhoneLayout,
+        pageWidth: CGFloat
+    ) -> some View {
+        // Match the card's 1233 px source to the 750 px phone screenshot,
+        // as in the Bottom-sheet slide. No screen-width fill is applied.
+        let imageScale = min(
+            phoneLayout.slotSize.width / 750,
+            phoneLayout.slotSize.height / 1624
+        )
+        let cardWidth = (1233 * imageScale).rounded()
+        let cardHeight = cardWidth * 474 / 1233
+        let slotTop = phoneLayout.top
+            + (phoneLayout.size.height - phoneLayout.slotSize.height) / 2
+        let screenshotTop = slotTop
+            + (phoneLayout.slotSize.height - 1624 * imageScale) / 2
+        let analyticsHeadingBottom = screenshotTop + 268 * imageScale
+        // The visible card starts 84 source pixels below its transparent top.
+        let cardTop = analyticsHeadingBottom + 10 - 84 * cardWidth / 1233
+
+        return Image(assetName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: cardWidth, height: cardHeight)
+            .position(x: pageWidth / 2, y: cardTop + cardHeight / 2)
+            .offset(y: isExternalCardVisible || usesReducedContentMotion ? 0 : 30)
+            .opacity(isExternalCardVisible ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
     @ViewBuilder
     private func mediaPageView(
         for item: Item,
         index: Int,
-        viewportSize: CGSize,
-        slotCornerRadius: CGFloat
+        viewportSize: CGSize
     ) -> some View {
         let page = mediaView(
             for: item,
@@ -2473,12 +2516,6 @@ private struct IOS26StyleOnboarding: View {
         if layoutVariant.usesFigmaGuide {
             page
                 .background(backgroundColor)
-                .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: slotCornerRadius,
-                        style: .continuous
-                    )
-                )
         } else {
             page
         }
@@ -2491,7 +2528,11 @@ private struct IOS26StyleOnboarding: View {
         isTransitioning: Bool
     ) -> some View {
         ZStack {
-            if let poster = item.media.poster {
+            if case let .assetImage(name) = item.media {
+                Image(name)
+                    .resizable()
+                    .aspectRatio(contentMode: layoutVariant.usesFigmaGuide ? .fit : .fill)
+            } else if let poster = item.media.poster {
                 Image(uiImage: poster)
                     .resizable()
                     .aspectRatio(contentMode: layoutVariant.usesFigmaGuide ? .fit : .fill)
@@ -2886,7 +2927,9 @@ private struct IOS26StyleOnboarding: View {
                 actionHeight = 136
             }
             let copyHeight = guideCopyHeight(for: item, pageWidth: pageWidth)
-            let fixedHeight: CGFloat = 98
+            // 90 pt cover the copy-to-pager gap, pager, and safe area;
+            // the media-to-copy inset depends on the phone presentation.
+            let fixedHeight = 90 + guideCopyTopPadding(for: item)
             return fixedHeight + copyHeight + actionHeight
         }
 
@@ -2913,6 +2956,10 @@ private struct IOS26StyleOnboarding: View {
         return measuredHeight(item.title, font: titleFont, tracking: 0.38)
             + Self.copySpacing
             + measuredHeight(item.subtitle, font: subtitleFont, tracking: -0.41)
+    }
+
+    private func guideCopyTopPadding(for item: Item) -> CGFloat {
+        item.phonePresentation == .largeTop ? 32 : 8
     }
 
     private var backgroundColor: Color {
@@ -2945,6 +2992,7 @@ private struct IOS26StyleOnboarding: View {
         var subtitle: String
         var media: OnboardingMedia
         var phonePresentation: PhonePresentation = .default
+        var externalCardAssetName: String? = nil
         var buttonTitle: String
         var secondaryButtonTitle: String? = nil
     }
@@ -3179,6 +3227,7 @@ private struct IOS26StyleOnboarding: View {
 
     private func beginMediaTransition() {
         mediaTransitionToken = UUID()
+        isExternalCardVisible = false
         isMediaTransitionActive = true
     }
 
@@ -3193,6 +3242,18 @@ private struct IOS26StyleOnboarding: View {
             }
 
             isMediaTransitionActive = false
+            revealExternalCard()
+        }
+    }
+
+    private func revealExternalCard() {
+        guard items.indices.contains(currentIndex),
+              items[currentIndex].externalCardAssetName != nil else {
+            return
+        }
+
+        withAnimation(.timingCurve(0.2, 0, 0.4, 0.9, duration: 0.3)) {
+            isExternalCardVisible = true
         }
     }
 
@@ -3416,6 +3477,7 @@ private struct LongreadStyleOnboarding: View {
 
 private enum OnboardingMedia {
     case image(poster: UIImage?)
+    case assetImage(name: String)
     case video(
         poster: UIImage?,
         resourceName: String,
@@ -3426,6 +3488,8 @@ private enum OnboardingMedia {
         switch self {
         case let .image(poster), let .video(poster, _, _):
             poster
+        case .assetImage:
+            nil
         }
     }
 
