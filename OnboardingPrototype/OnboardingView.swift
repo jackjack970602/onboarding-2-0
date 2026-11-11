@@ -39,6 +39,17 @@ struct OnboardingView: View {
                 }
 
                 NavigationLink {
+                    InterfaceGuideOnboardingView()
+                } label: {
+                    OnboardingFormatRow(
+                        title: "Interface · новый макет",
+                        subtitle: "Копия по гайду: адаптивные Full, Top и Bottom",
+                        systemImage: "iphone.gen3",
+                        badge: "Новая версия"
+                    )
+                }
+
+                NavigationLink {
                     InterfaceOnboardingView(motionMode: .reducedMotion)
                 } label: {
                     OnboardingFormatRow(
@@ -2027,14 +2038,19 @@ private enum InterfaceMotionMode {
     case reducedMotion
 }
 
-private enum InterfaceLayoutVariant {
+private enum InterfaceLayoutVariant: Equatable {
     case original
     case version2
+    case figmaGuide
+
+    var usesFigmaGuide: Bool { self == .figmaGuide }
 
     var minimumPictureAreaHeight: CGFloat {
         switch self {
         case .original: 280
         case .version2: 280
+        // Figma's 200-point Image-Area minimum sits below the 98-point navbar.
+        case .figmaGuide: 298
         }
     }
 }
@@ -2158,6 +2174,67 @@ private struct Interface2OnboardingView: View {
     }
 }
 
+// A separate demo copy of the Interface flow. It shares the gesture and
+// transition engine with the original, but opts into the new Figma layout.
+private struct InterfaceGuideOnboardingView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        IOS26StyleOnboarding(
+            hideBezels: false,
+            motionMode: .standard,
+            layoutVariant: .figmaGuide,
+            items: [
+                .init(
+                    id: 0,
+                    title: "Всё необходимое рядом",
+                    subtitle: "Следите за обновлениями,\nбыстро находите нужные функции\nи управляйте ими в одном месте",
+                    media: .video(
+                        poster: UIImage(named: "OnboardingScreen1"),
+                        resourceName: "OnboardingInterface1Light",
+                        darkResourceName: "OnboardingInterface1Dark"
+                    ),
+                    buttonTitle: "Далее"
+                ),
+                .init(
+                    id: 1,
+                    title: "Новый интерфейс стал\nпроще и удобнее",
+                    subtitle: "Основные разделы всегда под рукой.\nБыстро переходите между задачами\nи настраивайте экран под себя",
+                    media: .image(poster: UIImage(named: "OnboardingScreen2")),
+                    buttonTitle: "Далее"
+                ),
+                .init(
+                    id: 2,
+                    title: "Больше возможностей",
+                    subtitle: "Открывайте новые функции\nи находите нужное быстрее",
+                    media: .image(poster: UIImage(named: "OnboardingScreen4")),
+                    phonePresentation: .largeBottom,
+                    buttonTitle: "Далее"
+                ),
+                .init(
+                    id: 3,
+                    title: "Настройте всё\nтак, как удобно вам",
+                    subtitle: "Выберите подходящий вариант\nили вернитесь к настройке позже",
+                    media: .image(poster: UIImage(named: "OnboardingScreen3")),
+                    phonePresentation: .largeTop,
+                    buttonTitle: "Далее"
+                ),
+                .init(
+                    id: 4,
+                    title: "Всё готово\nк началу работы",
+                    subtitle: "Продолжайте знакомство\nи открывайте новые возможности",
+                    media: .image(poster: UIImage(named: "OnboardingScreen3")),
+                    phonePresentation: .largeTop,
+                    buttonTitle: "Понятно",
+                    secondaryButtonTitle: "Вернуться к настройке"
+                )
+            ],
+            onBackFromFirstPage: { dismiss() }
+        )
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
 private struct IOS26StyleOnboarding: View {
     private static let maximumTitleLines = 2
     private static let maximumSubtitleLines = 4
@@ -2197,14 +2274,21 @@ private struct IOS26StyleOnboarding: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
-            let topSafeArea = onboardingAppBarTopInset(geometry.safeAreaInsets.top)
+            let bottomSafeArea = layoutVariant.usesFigmaGuide
+                ? max(geometry.safeAreaInsets.bottom, 24)
+                : max(geometry.safeAreaInsets.bottom, 34)
+            let topSafeArea = layoutVariant.usesFigmaGuide
+                ? onboardingAppBarTopInset(geometry.safeAreaInsets.top) - 8
+                : onboardingAppBarTopInset(geometry.safeAreaInsets.top)
+            let navigationHeight = topSafeArea + 44 + 10
             let bottomAreaHeight = interactiveBottomHeight(
                 pageWidth: geometry.size.width,
                 bottomSafeArea: bottomSafeArea
             )
             let pictureAreaHeight = max(
-                layoutVariant.minimumPictureAreaHeight,
+                layoutVariant.usesFigmaGuide
+                    ? navigationHeight + 200
+                    : layoutVariant.minimumPictureAreaHeight,
                 geometry.size.height - bottomAreaHeight
             )
 
@@ -2215,6 +2299,7 @@ private struct IOS26StyleOnboarding: View {
                 pictureAreaView(
                     pageWidth: geometry.size.width,
                     screenHeight: geometry.size.height,
+                    navigationHeight: navigationHeight,
                     size: CGSize(
                         width: geometry.size.width,
                         height: pictureAreaHeight
@@ -2245,30 +2330,36 @@ private struct IOS26StyleOnboarding: View {
         pageWidth: CGFloat,
         bottomSafeArea: CGFloat
     ) -> some View {
-        ZStack(alignment: .top) {
+        let isGuide = layoutVariant.usesFigmaGuide
+        let copyHeight = isGuide
+            ? guideCopyHeight(for: items[currentIndex], pageWidth: pageWidth)
+            : Self.maximumCopyHeight
+
+        return ZStack(alignment: .top) {
             textContentView(pageWidth: pageWidth)
-                .frame(height: Self.maximumCopyHeight, alignment: .top)
-                .padding(.top, 32)
-                .padding(.horizontal, 16)
+                .frame(height: copyHeight, alignment: .top)
+                .padding(.top, isGuide ? 8 : 32)
+                .padding(.horizontal, isGuide ? 20 : 16)
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
                 indicatorView(pageWidth: pageWidth)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, isGuide ? 20 : 12)
 
                 VStack(spacing: 0) {
                     continueButton
 
                     if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
                         secondaryButton(title: secondaryButtonTitle)
-                            .padding(.top, Self.twoButtonSpacing)
+                            .padding(.top, isGuide ? 8 : Self.twoButtonSpacing)
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(
                     .bottom,
-                    items[currentIndex].secondaryButtonTitle == nil ? 24 : 20
+                    items[currentIndex].secondaryButtonTitle == nil
+                        ? 24 : (isGuide ? 16 : 20)
                 )
 
                 Color.clear
@@ -2280,13 +2371,16 @@ private struct IOS26StyleOnboarding: View {
     private func pictureAreaView(
         pageWidth: CGFloat,
         screenHeight: CGFloat,
+        navigationHeight: CGFloat,
         size: CGSize
     ) -> some View {
         let phoneLayout = interactivePhoneLayout(
             pageWidth: pageWidth,
             pictureAreaHeight: size.height,
-            screenHeight: screenHeight
+            screenHeight: screenHeight,
+            navigationHeight: navigationHeight
         )
+        let navbarFadeHeight = layoutVariant.usesFigmaGuide ? navigationHeight : 98
 
         return ZStack(alignment: .top) {
             FigmaPhoneMockupFrame(
@@ -2296,24 +2390,42 @@ private struct IOS26StyleOnboarding: View {
                 outerCornerRadius: phoneLayout.outerCornerRadius,
                 slotCornerRadius: phoneLayout.slotCornerRadius
             ) { viewportSize in
-                ForEach(items.indices, id: \.self) { index in
-                    let item = items[index]
+                ZStack {
+                    if layoutVariant.usesFigmaGuide {
+                        Color.black
+                    }
 
-                    mediaView(
-                        for: item,
-                        isActive: currentIndex == index,
-                        isTransitioning: isMediaTransitionActive
-                    )
-                    .frame(
-                        width: viewportSize.width,
-                        height: viewportSize.height
-                    )
-                    .offset(
-                        x: CGFloat(index - currentIndex)
-                            * (viewportSize.width + 12)
-                            + dragTranslation
-                    )
+                    ForEach(items.indices, id: \.self) { index in
+                        let item = items[index]
+                        let restingPictureAreaHeight = max(
+                            navigationHeight + 200,
+                            screenHeight - bottomReferenceHeight(
+                                for: item,
+                                pageWidth: pageWidth
+                            )
+                        )
+                        let pageCornerRadius = item.phonePresentation.figmaGuideLayout(
+                            pictureAreaHeight: restingPictureAreaHeight,
+                            screenWidth: pageWidth,
+                            screenHeight: screenHeight,
+                            navigationHeight: navigationHeight
+                        ).slotCornerRadius
+
+                        mediaPageView(
+                            for: item,
+                            index: index,
+                            viewportSize: viewportSize,
+                            slotCornerRadius: pageCornerRadius
+                        )
+                        .offset(
+                            x: CGFloat(index - currentIndex)
+                                * (viewportSize.width + 12)
+                                + dragTranslation
+                        )
+                    }
                 }
+                .frame(width: viewportSize.width, height: viewportSize.height)
+                .clipped()
             }
             .position(
                 x: size.width / 2,
@@ -2331,7 +2443,7 @@ private struct IOS26StyleOnboarding: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: 98)
+                .frame(height: navbarFadeHeight)
 
                 // The updated Large-bottom slot owns an additional 80 pt fade
                 // at its top edge.
@@ -2346,7 +2458,7 @@ private struct IOS26StyleOnboarding: View {
                 )
                 .frame(height: 80)
             }
-            .frame(height: 98)
+            .frame(height: navbarFadeHeight)
             .frame(maxHeight: .infinity, alignment: .top)
             .opacity(largeBottomBlurVisibility(pageWidth: pageWidth))
 
@@ -2365,6 +2477,41 @@ private struct IOS26StyleOnboarding: View {
     }
 
     @ViewBuilder
+    private func mediaPageView(
+        for item: Item,
+        index: Int,
+        viewportSize: CGSize,
+        slotCornerRadius: CGFloat
+    ) -> some View {
+        let page = mediaView(
+            for: item,
+            isActive: currentIndex == index,
+            isTransitioning: isMediaTransitionActive
+        )
+        .frame(width: viewportSize.width, height: viewportSize.height)
+        // Keep the first two screens flush with the slot after fitting.
+        .scaleEffect(
+            x: layoutVariant.usesFigmaGuide && index < 2
+                ? (viewportSize.width + 2) / max(1, viewportSize.width)
+                : 1,
+            y: 1
+        )
+
+        if layoutVariant.usesFigmaGuide {
+            page
+                .background(backgroundColor)
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: slotCornerRadius,
+                        style: .continuous
+                    )
+                )
+        } else {
+            page
+        }
+    }
+
+    @ViewBuilder
     private func mediaView(
         for item: Item,
         isActive: Bool,
@@ -2374,7 +2521,7 @@ private struct IOS26StyleOnboarding: View {
             if let poster = item.media.poster {
                 Image(uiImage: poster)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
+                    .aspectRatio(contentMode: layoutVariant.usesFigmaGuide ? .fit : .fill)
             } else {
                 Rectangle()
                     .fill(.black)
@@ -2388,6 +2535,7 @@ private struct IOS26StyleOnboarding: View {
                         && !isTransitioning
                         && scenePhase == .active,
                     isFrozen: isTransitioning,
+                    fitsContent: layoutVariant.usesFigmaGuide,
                     posterDuration: 1.5
                 )
             }
@@ -2420,7 +2568,10 @@ private struct IOS26StyleOnboarding: View {
                             .tracking(-0.41)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(primaryTextColor)
+                            .foregroundStyle(
+                                layoutVariant.usesFigmaGuide
+                                    ? secondaryTextColor : primaryTextColor
+                            )
                     }
                     .frame(width: size.width)
                     .modifier(
@@ -2484,7 +2635,7 @@ private struct IOS26StyleOnboarding: View {
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255))
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(height: layoutVariant.usesFigmaGuide ? 56 : 48)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -2519,7 +2670,7 @@ private struct IOS26StyleOnboarding: View {
 
             transition(to: currentIndex - 1)
         } label: {
-            Image(systemName: "chevron.left")
+            Image(systemName: layoutVariant.usesFigmaGuide ? "xmark" : "chevron.left")
                 .font(.system(size: 18, weight: .medium))
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
@@ -2569,22 +2720,37 @@ private struct IOS26StyleOnboarding: View {
     private func interactivePhoneLayout(
         pageWidth: CGFloat,
         pictureAreaHeight: CGFloat,
-        screenHeight: CGFloat
+        screenHeight: CGFloat,
+        navigationHeight: CGFloat
     ) -> PhoneLayout {
         let targetIndex = transitionTargetIndex()
         let progress = transitionProgress(pageWidth: pageWidth)
         let currentItem = items[currentIndex]
         let targetItem = items[targetIndex]
-        let currentLayout = currentItem.phonePresentation.layout(
-            pictureAreaHeight: pictureAreaHeight,
-            screenWidth: pageWidth,
-            screenHeight: screenHeight
-        )
-        let targetLayout = targetItem.phonePresentation.layout(
-            pictureAreaHeight: pictureAreaHeight,
-            screenWidth: pageWidth,
-            screenHeight: screenHeight
-        )
+        let currentLayout = layoutVariant.usesFigmaGuide
+            ? currentItem.phonePresentation.figmaGuideLayout(
+                pictureAreaHeight: pictureAreaHeight,
+                screenWidth: pageWidth,
+                screenHeight: screenHeight,
+                navigationHeight: navigationHeight
+            )
+            : currentItem.phonePresentation.layout(
+                pictureAreaHeight: pictureAreaHeight,
+                screenWidth: pageWidth,
+                screenHeight: screenHeight
+            )
+        let targetLayout = layoutVariant.usesFigmaGuide
+            ? targetItem.phonePresentation.figmaGuideLayout(
+                pictureAreaHeight: pictureAreaHeight,
+                screenWidth: pageWidth,
+                screenHeight: screenHeight,
+                navigationHeight: navigationHeight
+            )
+            : targetItem.phonePresentation.layout(
+                pictureAreaHeight: pictureAreaHeight,
+                screenWidth: pageWidth,
+                screenHeight: screenHeight
+            )
 
         return PhoneLayout(
             size: CGSize(
@@ -2722,17 +2888,58 @@ private struct IOS26StyleOnboarding: View {
         pageWidth: CGFloat,
         bottomSafeArea: CGFloat
     ) -> CGFloat {
-        let currentHeight = bottomReferenceHeight(for: items[currentIndex])
-        let targetHeight = bottomReferenceHeight(for: items[transitionTargetIndex()])
+        let currentHeight = bottomReferenceHeight(
+            for: items[currentIndex], pageWidth: pageWidth
+        )
+        let targetHeight = bottomReferenceHeight(
+            for: items[transitionTargetIndex()], pageWidth: pageWidth
+        )
         let progress = transitionProgress(pageWidth: pageWidth)
-        let safeAreaDelta = max(0, bottomSafeArea - 34)
+        let safeAreaDelta = max(
+            0,
+            bottomSafeArea - (layoutVariant.usesFigmaGuide ? 24 : 34)
+        )
         return currentHeight + (targetHeight - currentHeight) * progress + safeAreaDelta
     }
 
-    private func bottomReferenceHeight(for item: Item) -> CGFloat {
-        item.secondaryButtonTitle == nil
+    private func bottomReferenceHeight(for item: Item, pageWidth: CGFloat) -> CGFloat {
+        if layoutVariant.usesFigmaGuide {
+            // The new Bottom hugs the measured copy; unused height fills Image-Area.
+            // The second button adds one 56-point action and reduces bottom padding.
+            let actionHeight: CGFloat
+            if item.secondaryButtonTitle == nil {
+                actionHeight = 80
+            } else {
+                actionHeight = 136
+            }
+            let copyHeight = guideCopyHeight(for: item, pageWidth: pageWidth)
+            let fixedHeight: CGFloat = 98
+            return fixedHeight + copyHeight + actionHeight
+        }
+
+        return item.secondaryButtonTitle == nil
             ? Self.oneButtonBottomReferenceHeight
             : Self.twoButtonBottomReferenceHeight
+    }
+
+    private func guideCopyHeight(for item: Item, pageWidth: CGFloat) -> CGFloat {
+        let width = max(1, pageWidth - 40)
+        let titleFont = UIFont.systemFont(ofSize: 20, weight: .bold)
+        let subtitleFont = UIFont.systemFont(ofSize: 17, weight: .regular)
+
+        func measuredHeight(_ string: String, font: UIFont, tracking: CGFloat) -> CGFloat {
+            let rect = (string as NSString).boundingRect(
+                with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font, .kern: tracking],
+                context: nil
+            )
+            return ceil(rect.height)
+        }
+
+        return measuredHeight(item.title, font: titleFont, tracking: 0.38)
+            + Self.copySpacing
+            + measuredHeight(item.subtitle, font: subtitleFont, tracking: -0.41)
     }
 
     private var backgroundColor: Color {
@@ -2797,6 +3004,67 @@ private struct IOS26StyleOnboarding: View {
         case `default`
         case largeTop
         case largeBottom
+
+        // Figma's new flow: Full fills the free image slot below the 98-point
+        // navigation area. Top and Bottom reuse the original integer L
+        // breakpoint sizes; Bottom stays anchored above the copy.
+        fileprivate func figmaGuideLayout(
+            pictureAreaHeight: CGFloat,
+            screenWidth: CGFloat,
+            screenHeight: CGFloat,
+            navigationHeight: CGFloat
+        ) -> PhoneLayout {
+            let scale = Self.breakpointScale(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight
+            )
+            let largeSize = Self.largePhoneSize(
+                screenWidth: screenWidth,
+                screenHeight: screenHeight
+            )
+            let largeSlot = Self.scaledIntegerSize(
+                Self.largeBaseSlotSize,
+                scale: scale
+            )
+            let largeOuterRadius = (Self.largeOuterCornerRadius * scale).rounded()
+            let largeSlotRadius = (Self.largeSlotCornerRadius * scale).rounded()
+
+            switch self {
+            case .default:
+                let slotHeight = max(0, pictureAreaHeight - navigationHeight - 20)
+                let phoneHeight = max(
+                    1,
+                    min(slotHeight, max(1, screenWidth - 32) * 426 / 207)
+                ).rounded()
+                let phoneWidth = (phoneHeight * 207 / 426).rounded()
+                return PhoneLayout(
+                    size: CGSize(width: phoneWidth, height: phoneHeight),
+                    slotSize: CGSize(
+                        width: (phoneWidth * 203.72 / 224.49).rounded(),
+                        height: (phoneHeight * 441.61 / 462).rounded()
+                    ),
+                    top: navigationHeight + (slotHeight - phoneHeight) / 2,
+                    outerCornerRadius: (phoneWidth * 40 / 224.49).rounded(),
+                    slotCornerRadius: (phoneWidth * 32 / 224.49).rounded()
+                )
+            case .largeTop:
+                return PhoneLayout(
+                    size: largeSize,
+                    slotSize: largeSlot,
+                    top: navigationHeight + 8,
+                    outerCornerRadius: largeOuterRadius,
+                    slotCornerRadius: largeSlotRadius
+                )
+            case .largeBottom:
+                return PhoneLayout(
+                    size: largeSize,
+                    slotSize: largeSlot,
+                    top: pictureAreaHeight - 32 - largeSize.height,
+                    outerCornerRadius: largeOuterRadius,
+                    slotCornerRadius: largeSlotRadius
+                )
+            }
+        }
 
         fileprivate func layout(
             pictureAreaHeight: CGFloat,
@@ -3201,6 +3469,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
     let resourceName: String
     let isPlaying: Bool
     var isFrozen = false
+    var fitsContent = false
     let posterDuration: TimeInterval
 
     func makeCoordinator() -> Coordinator {
@@ -3209,6 +3478,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> OnboardingPlayerView {
         let view = OnboardingPlayerView()
+        view.playerLayer.videoGravity = fitsContent ? .resizeAspect : .resizeAspectFill
         context.coordinator.update(
             playerLayer: view.playerLayer,
             resourceName: resourceName,
@@ -3220,6 +3490,7 @@ private struct OnboardingVideoView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: OnboardingPlayerView, context: Context) {
+        uiView.playerLayer.videoGravity = fitsContent ? .resizeAspect : .resizeAspectFill
         context.coordinator.update(
             playerLayer: uiView.playerLayer,
             resourceName: resourceName,
