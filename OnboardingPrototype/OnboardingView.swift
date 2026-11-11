@@ -18,45 +18,12 @@ struct OnboardingView: View {
         List {
             Section("Форматы") {
                 NavigationLink {
-                    InterfaceOnboardingView(motionMode: .standard)
-                } label: {
-                    OnboardingFormatRow(
-                        title: "Интерфейс",
-                        subtitle: "Скриншоты и видео внутри фрейма телефона",
-                        systemImage: "iphone.gen3"
-                    )
-                }
-
-                NavigationLink {
-                    Interface2OnboardingView()
-                } label: {
-                    OnboardingFormatRow(
-                        title: "Interface-2.0",
-                        subtitle: "Отдельная версия для новых правил",
-                        systemImage: "iphone.gen3",
-                        badge: "Эксперимент"
-                    )
-                }
-
-                NavigationLink {
                     InterfaceGuideOnboardingView()
                 } label: {
                     OnboardingFormatRow(
-                        title: "Interface · новый макет",
-                        subtitle: "Копия по гайду: адаптивные Full, Top и Bottom",
-                        systemImage: "iphone.gen3",
-                        badge: "Новая версия"
-                    )
-                }
-
-                NavigationLink {
-                    InterfaceOnboardingView(motionMode: .reducedMotion)
-                } label: {
-                    OnboardingFormatRow(
-                        title: "Интерфейс · Reduce Motion",
-                        subtitle: "Бесшовный морфинг и горизонтальный свайп без blur",
-                        systemImage: "iphone.gen3",
-                        badge: "Эксперимент"
+                        title: "Интерфейс",
+                        subtitle: "Адаптивные Full, Top и Bottom",
+                        systemImage: "iphone.gen3"
                     )
                 }
 
@@ -1617,6 +1584,7 @@ private struct BottomSheetGuideStyleOnboarding: View {
 
     @State private var currentIndex = 0
     @State private var dragTranslation: CGFloat = 0
+    @State private var swipeHapticTrigger = 0
 
     private let mediumMediaHeight: CGFloat = 280
     private let largeMediaHeight: CGFloat = 320
@@ -1677,6 +1645,7 @@ private struct BottomSheetGuideStyleOnboarding: View {
         .clipShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: 36, style: .continuous))
         .simultaneousGesture(pageDragGesture)
+        .sensoryFeedback(.selection, trigger: swipeHapticTrigger)
         .animation(pageAnimation, value: currentIndex)
     }
 
@@ -1950,6 +1919,7 @@ private struct BottomSheetGuideStyleOnboarding: View {
                     currentIndex = currentIndex == items.count - 1 ? 0 : currentIndex + 1
                     dragTranslation = 0
                 }
+                swipeHapticTrigger += 1
             } label: {
                 OnboardingPrimaryButtonTitle(
                     title: items[currentIndex].buttonTitle,
@@ -2002,6 +1972,9 @@ private struct BottomSheetGuideStyleOnboarding: View {
                     } else if actual > cardWidth * 0.18 || predicted > cardWidth * 0.28 {
                         target = max(currentIndex - 1, 0)
                     }
+                }
+                if target != currentIndex {
+                    swipeHapticTrigger += 1
                 }
                 withAnimation(pageAnimation) {
                     currentIndex = target
