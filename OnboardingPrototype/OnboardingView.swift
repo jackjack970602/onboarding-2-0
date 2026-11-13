@@ -502,6 +502,7 @@ private struct IllustrationStyleOnboarding: View {
                 } else {
                     dragTranslation = min(max(rawTranslation, -pageWidth), pageWidth)
                 }
+
             }
             .onEnded { value in
                 let isHorizontal = abs(value.translation.width) > abs(value.translation.height)
@@ -2239,6 +2240,10 @@ private struct IOS26StyleOnboarding: View {
         bottomReferenceBaseHeight + 56 + 24
     private static let twoButtonBottomReferenceHeight: CGFloat =
         bottomReferenceBaseHeight + 56 + twoButtonSpacing + 48 + 20
+    private static let externalCardCollapseDragThreshold: CGFloat = 12
+    private static let externalCardCollapseDragDistance: CGFloat = 24
+    private static let externalCardCollapseDuration = 0.075
+    private static let darkCardAtSourceColor = makeDarkCardAtSourceColor()
 
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -2257,6 +2262,11 @@ private struct IOS26StyleOnboarding: View {
     @State private var isMediaTransitionActive = false
     @State private var mediaTransitionToken = UUID()
     @State private var isExternalCardVisible = false
+    @State private var isExternalCardStaged = false
+    @State private var externalCardColorProgress = 0.0
+    @State private var externalCardExitOpacity = 1.0
+    @State private var manualCardCollapseProgress: CGFloat?
+    @State private var isManualCardHidden = false
 
     var body: some View {
         GeometryReader { geometry in
@@ -2388,11 +2398,25 @@ private struct IOS26StyleOnboarding: View {
 
                     ForEach(items.indices, id: \.self) { index in
                         let item = items[index]
+                        let restingPictureAreaHeight = max(
+                            navigationHeight + 200,
+                            screenHeight - bottomReferenceHeight(
+                                for: item,
+                                pageWidth: pageWidth
+                            )
+                        )
+                        let pageCornerRadius = item.phonePresentation.figmaGuideLayout(
+                            pictureAreaHeight: restingPictureAreaHeight,
+                            screenWidth: pageWidth,
+                            screenHeight: screenHeight,
+                            navigationHeight: navigationHeight
+                        ).slotCornerRadius
 
                         mediaPageView(
                             for: item,
                             index: index,
-                            viewportSize: viewportSize
+                            viewportSize: viewportSize,
+                            slotCornerRadius: pageCornerRadius
                         )
                         .offset(
                             x: CGFloat(index - currentIndex)
@@ -2409,11 +2433,19 @@ private struct IOS26StyleOnboarding: View {
                 y: phoneLayout.top + phoneLayout.size.height / 2
             )
 
-            if let cardAssetName = items[currentIndex].externalCardAssetName {
+            if let cardIndex = items.firstIndex(where: { $0.externalCardAssetName != nil }),
+               let cardAssetName = items[cardIndex].externalCardAssetName {
                 externalCardView(
                     assetName: cardAssetName,
                     phoneLayout: phoneLayout,
                     pageWidth: pageWidth
+                )
+                .offset(
+                    x: CGFloat(cardIndex - currentIndex)
+                        * ((hideBezels
+                            ? phoneLayout.size.width
+                            : phoneLayout.slotSize.width) + 12)
+                        + dragTranslation
                 )
             }
 
@@ -2466,38 +2498,166 @@ private struct IOS26StyleOnboarding: View {
         phoneLayout: PhoneLayout,
         pageWidth: CGFloat
     ) -> some View {
-        // Match the card's 1233 px source to the 750 px phone screenshot,
-        // as in the Bottom-sheet slide. No screen-width fill is applied.
-        let imageScale = min(
+        let screenshotSize = CGSize(width: 750, height: 1624)
+        let cardImageSize = CGSize(width: 1233, height: 474)
+        // Bounds of the first card inside the 750 × 1624 screenshot and of
+        // its opaque body inside the transparent detached-card asset.
+        let sourceCard = CGRect(x: 32, y: 330, width: 686, height: 180)
+        let detachedCardBody = CGRect(x: 102, y: 84, width: 1029, height: 270)
+
+        let screenshotScale = min(
             phoneLayout.slotSize.width / 750,
             phoneLayout.slotSize.height / 1624
         )
-        let cardWidth = (1233 * imageScale).rounded()
-        let cardHeight = cardWidth * 474 / 1233
-        let slotTop = phoneLayout.top
-            + (phoneLayout.size.height - phoneLayout.slotSize.height) / 2
-        let screenshotTop = slotTop
-            + (phoneLayout.slotSize.height - 1624 * imageScale) / 2
-        let analyticsHeadingBottom = screenshotTop + 268 * imageScale
-        // The visible card starts 84 source pixels below its transparent top.
-        let cardTop = analyticsHeadingBottom + 10 - 84 * cardWidth / 1233
+        let slotOrigin = CGPoint(
+            x: (pageWidth - phoneLayout.slotSize.width) / 2,
+            y: phoneLayout.top
+                + (phoneLayout.size.height - phoneLayout.slotSize.height) / 2
+        )
+        let screenshotOrigin = CGPoint(
+            x: slotOrigin.x
+                + (phoneLayout.slotSize.width - screenshotSize.width * screenshotScale) / 2,
+            y: slotOrigin.y
+                + (phoneLayout.slotSize.height - screenshotSize.height * screenshotScale) / 2
+        )
 
-        return Image(assetName)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
-            .frame(width: cardWidth, height: cardHeight)
-            .position(x: pageWidth / 2, y: cardTop + cardHeight / 2)
-            .offset(y: isExternalCardVisible || usesReducedContentMotion ? 0 : 30)
-            .opacity(isExternalCardVisible ? 1 : 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        // The vector mockup provides the Slot bounds. Map the card's source
+        // coordinates through the fitted screenshot to the onboarding view.
+        let sourceCardOrigin = CGPoint(
+            x: screenshotOrigin.x + sourceCard.minX * screenshotScale,
+            y: screenshotOrigin.y + sourceCard.minY * screenshotScale
+        )
+        let initialScale = sourceCard.width * screenshotScale / detachedCardBody.width
+        let initialFrame = CGRect(
+            x: sourceCardOrigin.x - detachedCardBody.minX * initialScale,
+            y: sourceCardOrigin.y - detachedCardBody.minY * initialScale,
+            width: cardImageSize.width * initialScale,
+            height: cardImageSize.height * initialScale
+        )
+
+        let targetWidth = (cardImageSize.width * screenshotScale).rounded()
+        let targetScale = targetWidth / cardImageSize.width
+        let targetFrame = CGRect(
+            x: (pageWidth - targetWidth) / 2,
+            y: screenshotOrigin.y + 268 * screenshotScale + 10
+                - detachedCardBody.minY * targetScale,
+            width: targetWidth,
+            height: cardImageSize.height * targetScale
+        )
+        let cardFrame: CGRect
+        if let progress = manualCardCollapseProgress {
+            cardFrame = CGRect(
+                x: targetFrame.minX + (initialFrame.minX - targetFrame.minX) * progress,
+                y: targetFrame.minY + (initialFrame.minY - targetFrame.minY) * progress,
+                width: targetFrame.width + (initialFrame.width - targetFrame.width) * progress,
+                height: targetFrame.height + (initialFrame.height - targetFrame.height) * progress
+            )
+        } else {
+            cardFrame = isExternalCardVisible || usesReducedContentMotion
+                ? targetFrame : initialFrame
+        }
+        let cardColorProgress = manualCardCollapseProgress.map { 1 - Double($0) }
+            ?? externalCardColorProgress
+        let cardOpacity = isExternalCardStaged && !isManualCardHidden
+            ? externalCardExitOpacity : 0
+
+        return ZStack {
+            if colorScheme == .dark,
+               let initialImage = Self.darkCardAtSourceColor {
+                Image(uiImage: initialImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: cardFrame.width, height: cardFrame.height)
+
+                Image(assetName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: cardFrame.width, height: cardFrame.height)
+                    .opacity(cardColorProgress)
+            } else {
+                Image(assetName)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: cardFrame.width, height: cardFrame.height)
+            }
+        }
+        .frame(width: cardFrame.width, height: cardFrame.height)
+        .position(x: cardFrame.midX, y: cardFrame.midY)
+        .opacity(cardOpacity)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private static func makeDarkCardAtSourceColor() -> UIImage? {
+        let darkTraits = UITraitCollection(userInterfaceStyle: .dark)
+        guard let original = UIImage(
+            named: "InterfaceGuideDetachedCard",
+            in: .main,
+            compatibleWith: darkTraits
+        ), let cgImage = original.cgImage else {
+            return nil
+        }
+
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerRow = width * 4
+        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
+        let recoloredImage = pixels.withUnsafeMutableBytes { rawPixels -> CGImage? in
+            guard let context = CGContext(
+                data: rawPixels.baseAddress,
+                width: width,
+                height: height,
+                bitsPerComponent: 8,
+                bytesPerRow: bytesPerRow,
+                space: CGColorSpace(name: CGColorSpace.sRGB)
+                    ?? CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue
+                    | CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                return nil
+            }
+
+            context.draw(
+                cgImage,
+                in: CGRect(x: 0, y: 0, width: CGFloat(width), height: CGFloat(height))
+            )
+            // Replace only the neutral fill; keep lettering, graph and alpha.
+            let rgba = rawPixels.bindMemory(to: UInt8.self)
+            for pixel in stride(from: 0, to: rgba.count, by: 4) {
+                let alpha = Int(rgba[pixel + 3])
+                guard alpha > 0 else { continue }
+
+                let red = Int(rgba[pixel]) * 255 / alpha
+                let green = Int(rgba[pixel + 1]) * 255 / alpha
+                let blue = Int(rgba[pixel + 2]) * 255 / alpha
+                guard abs(red - 44) <= 4,
+                      abs(green - 44) <= 4,
+                      abs(blue - 46) <= 4 else {
+                    continue
+                }
+
+                rgba[pixel] = UInt8((28 * alpha + 127) / 255)
+                rgba[pixel + 1] = UInt8((28 * alpha + 127) / 255)
+                rgba[pixel + 2] = UInt8((30 * alpha + 127) / 255)
+            }
+
+            return context.makeImage()
+        }
+
+        guard let recoloredImage else { return nil }
+        return UIImage(
+            cgImage: recoloredImage,
+            scale: original.scale,
+            orientation: original.imageOrientation
+        )
     }
 
     @ViewBuilder
     private func mediaPageView(
         for item: Item,
         index: Int,
-        viewportSize: CGSize
+        viewportSize: CGSize,
+        slotCornerRadius: CGFloat
     ) -> some View {
         let page = mediaView(
             for: item,
@@ -2516,6 +2676,12 @@ private struct IOS26StyleOnboarding: View {
         if layoutVariant.usesFigmaGuide {
             page
                 .background(backgroundColor)
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: slotCornerRadius,
+                        style: .continuous
+                    )
+                )
         } else {
             page
         }
@@ -2840,7 +3006,7 @@ private struct IOS26StyleOnboarding: View {
     }
 
     private func pageDragGesture(pageWidth: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 12)
+        DragGesture(minimumDistance: Self.externalCardCollapseDragThreshold)
             .onChanged { value in
                 guard abs(value.translation.width) > abs(value.translation.height) else {
                     dragTranslation = 0
@@ -2850,13 +3016,34 @@ private struct IOS26StyleOnboarding: View {
                 if !isDragGestureActive {
                     isDragGestureActive = true
                     beginMediaTransition()
+                    if items[currentIndex].externalCardAssetName != nil,
+                       isExternalCardStaged, isExternalCardVisible {
+                        manualCardCollapseProgress = 0
+                        isManualCardHidden = false
+                    }
                 }
 
                 let rawTranslation = value.translation.width
                 let isAtFirstPage = currentIndex == 0 && rawTranslation > 0
                 let isAtLastPage = currentIndex == items.count - 1 && rawTranslation < 0
 
-                if isAtFirstPage || isAtLastPage {
+                if manualCardCollapseProgress != nil,
+                   !isAtFirstPage, !isAtLastPage {
+                    // Spend the first part of the same gesture on the card.
+                    // The phone starts moving only after the card is hidden.
+                    let collapseDistance = Self.externalCardCollapseDragThreshold
+                        + Self.externalCardCollapseDragDistance
+                    let collapseTravel = max(
+                        0, abs(rawTranslation) - Self.externalCardCollapseDragThreshold
+                    )
+                    let collapseProgress = min(
+                        collapseTravel / Self.externalCardCollapseDragDistance, 1
+                    )
+                    manualCardCollapseProgress = collapseProgress
+                    isManualCardHidden = collapseProgress >= 1
+                    let pageTravel = min(max(abs(rawTranslation) - collapseDistance, 0), pageWidth)
+                    dragTranslation = rawTranslation < 0 ? -pageTravel : pageTravel
+                } else if isAtFirstPage || isAtLastPage {
                     dragTranslation = rawTranslation.sign == .minus
                         ? -min(abs(rawTranslation) * 0.24, 72)
                         : min(abs(rawTranslation) * 0.24, 72)
@@ -2883,19 +3070,91 @@ private struct IOS26StyleOnboarding: View {
                     targetIndex = max(currentIndex - 1, 0)
                 }
 
-                if targetIndex != currentIndex {
+                let stayedOnPage = targetIndex == currentIndex
+                let transitionToken = mediaTransitionToken
+                if let cardProgress = manualCardCollapseProgress {
+                    if stayedOnPage {
+                        // A cancelled gesture reverses the card within the
+                        // same stationary phone before restoring normal state.
+                        withTransaction(Transaction(animation: nil)) {
+                            isManualCardHidden = false
+                        }
+                        withAnimation(.timingCurve(
+                            0.2, 0, 0.4, 0.9,
+                            duration: max(0.001, 0.15 * Double(cardProgress))
+                        ), completionCriteria: .logicallyComplete) {
+                            manualCardCollapseProgress = 0
+                        } completion: {
+                            guard mediaTransitionToken == transitionToken else { return }
+                            manualCardCollapseProgress = nil
+                        }
+                        withAnimation(animation, completionCriteria: .logicallyComplete) {
+                            dragTranslation = 0
+                        } completion: {
+                            completeMediaTransition(token: transitionToken)
+                        }
+                    } else {
+                        swipeHapticTrigger += 1
+                        let remaining = 1 - cardProgress
+                        if remaining > 0 {
+                            withAnimation(.timingCurve(
+                                0.2, 0, 1, 1,
+                                duration: Self.externalCardCollapseDuration * Double(remaining)
+                            ), completionCriteria: .logicallyComplete) {
+                                manualCardCollapseProgress = 1
+                            } completion: {
+                                guard mediaTransitionToken == transitionToken else { return }
+                                withTransaction(Transaction(animation: nil)) {
+                                    isManualCardHidden = true
+                                }
+                                settleDrag(
+                                    to: targetIndex,
+                                    token: transitionToken,
+                                    wasDraggingHorizontally: wasDraggingHorizontally
+                                )
+                            }
+                        } else {
+                            settleDrag(
+                                to: targetIndex,
+                                token: transitionToken,
+                                wasDraggingHorizontally: wasDraggingHorizontally
+                            )
+                        }
+                    }
+                    return
+                }
+
+                if !stayedOnPage {
                     swipeHapticTrigger += 1
+                    collapseExternalCard()
+                } else if items[currentIndex].externalCardAssetName != nil {
+                    restoreExternalCardAfterCancelledDrag()
                 }
 
-                withAnimation(animation) {
-                    currentIndex = targetIndex
-                    dragTranslation = 0
-                }
-
-                if wasDraggingHorizontally {
-                    endMediaTransitionAfterAnimation()
-                }
+                settleDrag(
+                    to: targetIndex,
+                    token: transitionToken,
+                    wasDraggingHorizontally: wasDraggingHorizontally
+                )
             }
+    }
+
+    private func settleDrag(
+        to targetIndex: Int,
+        token: UUID,
+        wasDraggingHorizontally: Bool
+    ) {
+        withAnimation(animation, completionCriteria: .logicallyComplete) {
+            currentIndex = targetIndex
+            dragTranslation = 0
+        } completion: {
+            guard mediaTransitionToken == token else { return }
+            if wasDraggingHorizontally {
+                completeMediaTransition(token: token)
+            }
+            manualCardCollapseProgress = nil
+            isManualCardHidden = false
+        }
     }
 
     private func interactiveBottomHeight(
@@ -3018,9 +3277,11 @@ private struct IOS26StyleOnboarding: View {
         private static let largeBaseSlotSize = CGSize(width: 235, height: 508)
         private static let largePhoneScale: CGFloat = 1.5
         private static let mediumOuterCornerRadius: CGFloat = 32
-        private static let mediumSlotCornerRadius: CGFloat = 24
+        // Inner screen mask uses the continuous RoundedRectangle in
+        // FigmaPhoneMockupFrame to approximate Figma's 60% corner smoothing.
+        private static let mediumSlotCornerRadius: CGFloat = 28
         private static let largeOuterCornerRadius: CGFloat = 46
-        private static let largeSlotCornerRadius: CGFloat = 36
+        private static let largeSlotCornerRadius: CGFloat = 38
 
         case `default`
         case largeTop
@@ -3205,7 +3466,9 @@ private struct IOS26StyleOnboarding: View {
             screenWidth: CGFloat,
             screenHeight: CGFloat
         ) -> CGFloat {
-            if screenWidth >= 402, screenHeight >= 874 {
+            if screenWidth >= 428, screenHeight >= 926 {
+                1.30
+            } else if screenWidth >= 402, screenHeight >= 874 {
                 1.20
             } else if screenWidth >= 390, screenHeight >= 844 {
                 1.10
@@ -3225,24 +3488,68 @@ private struct IOS26StyleOnboarding: View {
         systemReduceMotion || motionMode == .reducedMotion
     }
 
+    private var externalCardAnimation: Animation {
+        .timingCurve(0.2, 0, 0.4, 0.9, duration: 0.3)
+    }
+
+    private func collapseExternalCard() {
+        guard items[currentIndex].externalCardAssetName != nil,
+              isExternalCardStaged,
+              isExternalCardVisible else { return }
+
+        // Keep the overlay staged until the page settles, so a cancelled
+        // swipe can reverse the current frame and opacity without a new show.
+        withAnimation(.timingCurve(
+            0.2, 0, 1, 1,
+            duration: Self.externalCardCollapseDuration
+        )) {
+            isExternalCardVisible = false
+            externalCardColorProgress = 0
+            externalCardExitOpacity = 0
+        }
+    }
+
+    private func restoreExternalCardAfterCancelledDrag() {
+        guard isExternalCardStaged, !isExternalCardVisible else { return }
+        withAnimation(.timingCurve(0.2, 0, 0.4, 0.9, duration: 0.15)) {
+            isExternalCardVisible = true
+            externalCardColorProgress = 1
+            externalCardExitOpacity = 1
+        }
+    }
+
     private func beginMediaTransition() {
         mediaTransitionToken = UUID()
-        isExternalCardVisible = false
+        if items[currentIndex].externalCardAssetName == nil {
+            isExternalCardVisible = false
+            isExternalCardStaged = false
+            externalCardColorProgress = 0
+            externalCardExitOpacity = 1
+        }
+
         isMediaTransitionActive = true
     }
 
-    private func endMediaTransitionAfterAnimation() {
-        let token = UUID()
-        mediaTransitionToken = token
-        let delay = systemReduceMotion ? 0.2 : 0.65
+    private func completeMediaTransition(token: UUID) {
+        guard mediaTransitionToken == token else { return }
+        isMediaTransitionActive = false
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-            guard mediaTransitionToken == token else {
-                return
+        if items[currentIndex].externalCardAssetName != nil {
+            guard !isExternalCardStaged else { return }
+            externalCardExitOpacity = 1
+            isExternalCardStaged = true
+
+            // Let the source-sized card render once before growing it.
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(16)) {
+                guard mediaTransitionToken == token,
+                      items[currentIndex].externalCardAssetName != nil else { return }
+                revealExternalCard()
             }
-
-            isMediaTransitionActive = false
-            revealExternalCard()
+        } else {
+            isExternalCardVisible = false
+            isExternalCardStaged = false
+            externalCardColorProgress = 0
+            externalCardExitOpacity = 1
         }
     }
 
@@ -3252,8 +3559,9 @@ private struct IOS26StyleOnboarding: View {
             return
         }
 
-        withAnimation(.timingCurve(0.2, 0, 0.4, 0.9, duration: 0.3)) {
+        withAnimation(externalCardAnimation) {
             isExternalCardVisible = true
+            externalCardColorProgress = 1
         }
     }
 
@@ -3263,13 +3571,15 @@ private struct IOS26StyleOnboarding: View {
         }
 
         beginMediaTransition()
+        collapseExternalCard()
+        let transitionToken = mediaTransitionToken
 
-        withAnimation(animation) {
+        withAnimation(animation, completionCriteria: .logicallyComplete) {
             currentIndex = targetIndex
             dragTranslation = 0
+        } completion: {
+            completeMediaTransition(token: transitionToken)
         }
-
-        endMediaTransitionAfterAnimation()
 
         swipeHapticTrigger += 1
     }
