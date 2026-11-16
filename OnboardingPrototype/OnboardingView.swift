@@ -2352,6 +2352,7 @@ private struct IOS26StyleOnboarding: View {
                     if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
                         secondaryButton(title: secondaryButtonTitle)
                             .padding(.top, isGuide ? 8 : Self.twoButtonSpacing)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .padding(.horizontal, 16)
