@@ -169,24 +169,11 @@ private struct IllustrationOnboardingView: View {
 }
 
 private struct IllustrationStyleOnboarding: View {
-    private static let maximumTitleLines = 2
-    private static let maximumSubtitleLines = 4
     private static let copySpacing: CGFloat = 8
-    private static let twoButtonSpacing: CGFloat = 16
-    private static let maximumCopyHeight =
-        ceil(UIFont.systemFont(ofSize: 20, weight: .bold).lineHeight)
-            * CGFloat(maximumTitleLines)
-        + copySpacing
-        + ceil(UIFont.systemFont(ofSize: 17, weight: .regular).lineHeight)
-            * CGFloat(maximumSubtitleLines)
-    // Match Interface: reserve the tallest copy, then size the action area
-    // for either one or two buttons using the same spacing and safe-area base.
-    private static let bottomReferenceBaseHeight: CGFloat =
-        32 + maximumCopyHeight + 32 + 14 + 12 + 34
-    private static let oneButtonBottomReferenceHeight: CGFloat =
-        bottomReferenceBaseHeight + 56 + 24
-    private static let twoButtonBottomReferenceHeight: CGFloat =
-        bottomReferenceBaseHeight + 56 + twoButtonSpacing + 48 + 20
+    private static let copyTopPadding: CGFloat = 8
+    private static let copyHorizontalPadding: CGFloat = 20
+    private static let pagerBottomPadding: CGFloat = 20
+    private static let secondaryButtonSpacing: CGFloat = 8
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
@@ -200,7 +187,7 @@ private struct IllustrationStyleOnboarding: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 34)
+            let bottomSafeArea = max(geometry.safeAreaInsets.bottom, 24)
             let topSafeArea = onboardingAppBarTopInset(geometry.safeAreaInsets.top)
             let bottomHeight = interactiveBottomHeight(
                 pageWidth: geometry.size.width,
@@ -299,30 +286,33 @@ private struct IllustrationStyleOnboarding: View {
         pageWidth: CGFloat,
         bottomSafeArea: CGFloat
     ) -> some View {
-        ZStack(alignment: .top) {
+        let copyHeight = measuredCopyHeight(for: items[currentIndex], pageWidth: pageWidth)
+
+        return ZStack(alignment: .top) {
             copyView(pageWidth: pageWidth)
-                .frame(height: Self.maximumCopyHeight, alignment: .top)
-                .padding(.top, 32)
-                .padding(.horizontal, 16)
+                .frame(height: copyHeight, alignment: .top)
+                .padding(.top, Self.copyTopPadding)
+                .padding(.horizontal, Self.copyHorizontalPadding)
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
                 indicatorView(pageWidth: pageWidth)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, Self.pagerBottomPadding)
 
                 VStack(spacing: 0) {
                     continueButton
 
                     if let secondaryButtonTitle = items[currentIndex].secondaryButtonTitle {
                         secondaryButton(title: secondaryButtonTitle)
-                            .padding(.top, Self.twoButtonSpacing)
+                            .padding(.top, Self.secondaryButtonSpacing)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(
                     .bottom,
-                    items[currentIndex].secondaryButtonTitle == nil ? 24 : 20
+                    items[currentIndex].secondaryButtonTitle == nil ? 24 : 16
                 )
 
                 Color.clear
@@ -333,7 +323,7 @@ private struct IllustrationStyleOnboarding: View {
 
     private func copyView(pageWidth: CGFloat) -> some View {
         GeometryReader { geometry in
-            ZStack(alignment: .top) {
+            ZStack(alignment: .bottom) {
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
                     let relativePage = reduceMotion
@@ -354,13 +344,9 @@ private struct IllustrationStyleOnboarding: View {
                             .tracking(-0.41)
                             .fixedSize(horizontal: false, vertical: true)
                             .multilineTextAlignment(.center)
-                            .foregroundStyle(primaryTextColor)
+                            .foregroundStyle(secondaryTextColor)
                     }
-                    .frame(
-                        width: geometry.size.width,
-                        height: Self.maximumCopyHeight,
-                        alignment: .top
-                    )
+                    .frame(width: geometry.size.width)
                     .compositingGroup()
                     .offset(
                         x: reduceMotion
@@ -371,28 +357,35 @@ private struct IllustrationStyleOnboarding: View {
                     .opacity(1 - distance)
                 }
             }
+            .frame(
+                width: geometry.size.width,
+                height: geometry.size.height,
+                alignment: .bottom
+            )
             .animation(pageAnimation, value: currentIndex)
         }
     }
 
     private func indicatorView(pageWidth: CGFloat) -> some View {
-        HStack(spacing: 7) {
-            ForEach(items.indices, id: \.self) { index in
-                let visibility = pageVisibility(for: index, pageWidth: pageWidth)
+        Group {
+            if items.count > 1 {
+                HStack(spacing: 7) {
+                    ForEach(items.indices, id: \.self) { index in
+                        let visibility = pageVisibility(for: index, pageWidth: pageWidth)
 
-                Circle()
-                    .fill(pageIndicatorInactiveColor)
-                    .overlay {
                         Circle()
-                            .fill(pageIndicatorActiveColor)
-                            .opacity(visibility)
+                            .fill(pageIndicatorInactiveColor)
+                            .overlay {
+                                Circle()
+                                    .fill(pageIndicatorActiveColor)
+                                    .opacity(visibility)
+                            }
+                            .frame(width: 6, height: 6)
                     }
-                    .frame(width: 6, height: 6)
+                }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(backgroundColor.opacity(0.3), in: Capsule())
+        .frame(height: 14)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Страница \(currentIndex + 1) из \(items.count)")
     }
@@ -421,7 +414,7 @@ private struct IllustrationStyleOnboarding: View {
                 .font(.system(size: 17, weight: .regular))
                 .foregroundStyle(Color(red: 66 / 255, green: 139 / 255, blue: 249 / 255))
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(height: 56)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -536,17 +529,42 @@ private struct IllustrationStyleOnboarding: View {
         pageWidth: CGFloat,
         bottomSafeArea: CGFloat
     ) -> CGFloat {
-        let currentHeight = bottomReferenceHeight(for: items[currentIndex])
-        let targetHeight = bottomReferenceHeight(for: items[transitionTargetIndex()])
+        let currentHeight = bottomReferenceHeight(
+            for: items[currentIndex], pageWidth: pageWidth
+        )
+        let targetHeight = bottomReferenceHeight(
+            for: items[transitionTargetIndex()], pageWidth: pageWidth
+        )
         let progress = transitionProgress(pageWidth: pageWidth)
-        let safeAreaDelta = max(0, bottomSafeArea - 34)
+        let safeAreaDelta = max(0, bottomSafeArea - 24)
         return currentHeight + (targetHeight - currentHeight) * progress + safeAreaDelta
     }
 
-    private func bottomReferenceHeight(for item: Item) -> CGFloat {
-        item.secondaryButtonTitle == nil
-            ? Self.oneButtonBottomReferenceHeight
-            : Self.twoButtonBottomReferenceHeight
+    private func bottomReferenceHeight(for item: Item, pageWidth: CGFloat) -> CGFloat {
+        let actionHeight: CGFloat = item.secondaryButtonTitle == nil ? 80 : 136
+        return 90 + Self.copyTopPadding
+            + measuredCopyHeight(for: item, pageWidth: pageWidth)
+            + actionHeight
+    }
+
+    private func measuredCopyHeight(for item: Item, pageWidth: CGFloat) -> CGFloat {
+        let width = max(1, pageWidth - Self.copyHorizontalPadding * 2)
+        let titleFont = UIFont.systemFont(ofSize: 20, weight: .bold)
+        let subtitleFont = UIFont.systemFont(ofSize: 17, weight: .regular)
+
+        func measuredHeight(_ string: String, font: UIFont, tracking: CGFloat) -> CGFloat {
+            let rect = (string as NSString).boundingRect(
+                with: CGSize(width: width, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font, .kern: tracking],
+                context: nil
+            )
+            return ceil(rect.height)
+        }
+
+        return measuredHeight(item.title, font: titleFont, tracking: 0.38)
+            + Self.copySpacing
+            + measuredHeight(item.subtitle, font: subtitleFont, tracking: -0.41)
     }
 
     private func transition(to targetIndex: Int) {
