@@ -128,7 +128,7 @@ private struct IllustrationOnboardingView: View {
                 .init(
                     id: 0,
                     title: "Делите покупки\nв Шопинге по карте",
-                    subtitle: "Оплачивайте часть суммы сразу.\nОстальное — потом, равными частями.\nПлатежи списываются автоматически\nкаждые две недели",
+                    subtitle: "Оплатите часть суммы сразу.\nОстальное спишется автоматически\nкаждые две недели",
                     imageName: "OnboardingIllustrationShopping",
                     imageAlignment: .bottom,
                     buttonTitle: "Далее",
@@ -194,6 +194,11 @@ private struct IllustrationStyleOnboarding: View {
                 bottomSafeArea: bottomSafeArea
             )
             let pictureAreaHeight = max(280, geometry.size.height - bottomHeight)
+            let screenScale = max(
+                1,
+                min(geometry.size.width / 375, geometry.size.height / 812)
+            )
+            let slotSide = min(360, (300 * screenScale).rounded())
 
             ZStack(alignment: .top) {
                 backgroundColor
@@ -205,7 +210,9 @@ private struct IllustrationStyleOnboarding: View {
                         size: CGSize(
                             width: geometry.size.width,
                             height: pictureAreaHeight
-                        )
+                        ),
+                        navigationHeight: topSafeArea + 46,
+                        slotSide: slotSide
                     )
                     .frame(height: pictureAreaHeight)
                     .clipped()
@@ -227,16 +234,12 @@ private struct IllustrationStyleOnboarding: View {
         .ignoresSafeArea()
     }
 
-    private func pictureAreaView(pageWidth: CGFloat, size: CGSize) -> some View {
-        let slotTopPadding: CGFloat = 80
-        let slotHorizontalPadding: CGFloat = 24
-        let slotBottomPadding: CGFloat = 40
-        let slotWidth = max(0, size.width - slotHorizontalPadding * 2)
-        let slotHeight = max(
-            0,
-            size.height - slotTopPadding - slotBottomPadding
-        )
-
+    private func pictureAreaView(
+        pageWidth: CGFloat,
+        size: CGSize,
+        navigationHeight: CGFloat,
+        slotSide: CGFloat
+    ) -> some View {
         return ZStack(alignment: .bottom) {
             ZStack {
                 ForEach(items.indices, id: \.self) { index in
@@ -250,8 +253,8 @@ private struct IllustrationStyleOnboarding: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(
-                            width: slotWidth,
-                            height: slotHeight
+                            width: slotSide,
+                            height: slotSide
                         )
                         .modifier(
                             IllustrationArcCarouselModifier(
@@ -263,10 +266,10 @@ private struct IllustrationStyleOnboarding: View {
                         .opacity(reduceMotion ? (isActive ? 1 : 0) : 1)
                 }
             }
-            .frame(width: slotWidth, height: slotHeight)
+            .frame(width: slotSide, height: slotSide)
             .position(
                 x: size.width / 2,
-                y: slotTopPadding + slotHeight / 2
+                y: (navigationHeight + size.height) / 2
             )
 
             LinearGradient(
