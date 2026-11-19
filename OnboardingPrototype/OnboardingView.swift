@@ -2748,7 +2748,7 @@ private struct IOS26StyleOnboarding: View {
         GeometryReader { geometry in
             let size = geometry.size
 
-            ZStack(alignment: .top) {
+            ZStack(alignment: layoutVariant.usesFigmaGuide ? .bottom : .top) {
                 ForEach(items.indices, id: \.self) { index in
                     let item = items[index]
                     let relativePage = relativePage(for: index, pageWidth: pageWidth)
@@ -2783,6 +2783,11 @@ private struct IOS26StyleOnboarding: View {
                     .opacity(usesReducedContentMotion ? 1 : 1 - distance)
                 }
             }
+            .frame(
+                width: size.width,
+                height: size.height,
+                alignment: layoutVariant.usesFigmaGuide ? .bottom : .top
+            )
         }
     }
 
